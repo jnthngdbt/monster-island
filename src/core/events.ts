@@ -1,4 +1,6 @@
-type Handler<T> = (payload: T) => void;
+import type { Cost } from '../data/items';
+
+type Handler<T> =(payload: T) => void;
 
 /** Petit bus d'événements typé. */
 export class EventBus<E extends Record<string, unknown>> {
@@ -24,4 +26,6 @@ export class EventBus<E extends Record<string, unknown>> {
 /** Événements du jeu (enrichis au fil des fonctionnalités). */
 export type GameEvents = {
   toast: { text: string };
+  itemsChanged: Record<string, never>;
+  harvested: { x: number; y: number; z: number; gained: Cost };
 };

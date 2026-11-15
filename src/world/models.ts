@@ -30,6 +30,27 @@ export function part(geo: THREE.BufferGeometry, color: string, x = 0, y = 0, z =
   return m;
 }
 
+/** Arme tenue en main (pointe vers +Z quand le bras est levé devant). */
+export function createWeaponModel(id: 'stick' | 'stone_sword'): THREE.Group {
+  const g = new THREE.Group();
+  if (id === 'stick') {
+    const stick = part(new THREE.CylinderGeometry(0.05, 0.07, 0.9, 5), PALETTE.trunk, 0, -0.35, 0.1);
+    stick.rotation.x = Math.PI / 2.4;
+    g.add(stick);
+  } else {
+    const blade = new THREE.Group();
+    blade.add(part(new THREE.BoxGeometry(0.08, 0.25, 0.08), PALETTE.woodDark, 0, 0, 0));
+    blade.add(part(new THREE.BoxGeometry(0.3, 0.06, 0.1), '#6d6f73', 0, -0.14, 0));
+    blade.add(part(new THREE.BoxGeometry(0.14, 0.75, 0.05), '#c9ccd1', 0, -0.55, 0));
+    blade.add(part(new THREE.ConeGeometry(0.07, 0.15, 4), '#c9ccd1', 0, -1.0, 0));
+    blade.children[3].rotation.x = Math.PI;
+    blade.rotation.x = -Math.PI / 2.4 + Math.PI;
+    blade.position.set(0, -0.05, 0.05);
+    g.add(blade);
+  }
+  return g;
+}
+
 export type PlayerModel = {
   group: THREE.Group;
   body: THREE.Group;
