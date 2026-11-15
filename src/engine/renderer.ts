@@ -14,6 +14,9 @@ export function createRenderContext(canvas: HTMLCanvasElement): RenderContext {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  // Compresse les hautes lumières au lieu de les saturer, sans délaver la palette.
+  renderer.toneMapping = THREE.NeutralToneMapping;
+  renderer.toneMappingExposure = 1.0;
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(PALETTE.sky);
@@ -21,10 +24,11 @@ export function createRenderContext(canvas: HTMLCanvasElement): RenderContext {
 
   const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 600);
 
-  const hemi = new THREE.HemisphereLight('#ffffff', '#5c8a3a', 1.1);
+  // Ciel bleuté d'en haut, rebond chaud du sol : les ombres sont froides, pas grises.
+  const hemi = new THREE.HemisphereLight('#cfe6ff', '#b0a890', 0.85);
   scene.add(hemi);
 
-  const sun = new THREE.DirectionalLight('#fff4d6', 1.8);
+  const sun = new THREE.DirectionalLight('#ffe9c4', 2.2);
   sun.position.set(40, 60, 20);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);

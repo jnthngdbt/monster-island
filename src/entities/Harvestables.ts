@@ -1,4 +1,5 @@
 import type * as THREE from 'three';
+import { Color } from 'three';
 import type { Circle } from '../core/collision';
 import type { Target } from '../core/combat';
 import type { Cost } from '../core/inventory';
@@ -27,6 +28,21 @@ export type HarvestNode = {
 
 const KINDS: HarvestKind[] = ['tree', 'rock', 'bush'];
 const RETRY_SEC = 15;
+
+const tint = new Color();
+const frac = (v: number): number => v - Math.floor(v);
+
+/**
+ * Teinte propre à chaque ressource : clarté et dérive chaud/froid.
+ * Dérivée de la position, pas du générateur aléatoire : la répartition (et les sauvegardes) ne change pas.
+ */
+function tintFor(x: number, z: number, kind: HarvestKind): Color {
+  const light = frac(Math.sin(x * 12.9898 + z * 78.233) * 43758.5453);
+  const warm = frac(Math.sin(x * 39.346 + z * 11.135) * 24634.6345) * 2 - 1;
+  const l = 0.82 + 0.34 * light;
+  const w = kind === 'rock' ? warm * 0.03 : warm * 0.09;
+  return tint.setRGB(l * (1 + w), l, l * (1 - w));
+}
 
 /** Arbres, rochers et buissons de l'île. */
 export class Harvestables {
@@ -61,6 +77,7 @@ export class Harvestables {
         this.nodes.push(node);
         this.byId.set(node.id, node);
         this.draw(node, 0);
+        model.tint(index, tintFor(p.x, p.z, kind));
       });
       model.finalize();
     }

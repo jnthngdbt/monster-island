@@ -64,6 +64,14 @@ export class InstancedModel {
     });
   }
 
+  /** Teinte multipliée à la couleur de chaque pièce de l'instance (variété sans appel de dessin en plus). */
+  tint(i: number, color: THREE.Color): void {
+    for (const m of this.meshes) {
+      m.setColorAt(i, color);
+      m.instanceColor!.needsUpdate = true;
+    }
+  }
+
   finalize(): void {
     for (const m of this.meshes) m.computeBoundingSphere();
   }

@@ -11,6 +11,8 @@
   font-family: var(--font);
   color: var(--ink);
   user-select: none;
+  /* Vignette légère : donne de la profondeur à l'image sans coût de rendu 3D. */
+  background: radial-gradient(ellipse at center, transparent 58%, rgba(20, 26, 60, 0.26) 100%);
 }
 
 .overlay {

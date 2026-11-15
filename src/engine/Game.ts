@@ -27,6 +27,7 @@ import { createKoScreen, createPauseScreen, createTitleScreen, Hints, type KoScr
 import { applyRespawn, chooseRespawnPoint, grantGrace } from '../core/respawn';
 import { Particles } from '../world/particles';
 import { CampfireLights } from '../world/campfireLights';
+import { createClouds, type Clouds } from '../world/clouds';
 import { Sky } from '../world/sky';
 import { createTerrainMesh } from '../world/terrainMesh';
 import { createWater, type Water } from '../world/water';
@@ -84,6 +85,7 @@ export class Game {
   private nextRaidAt = Infinity;
   private stepper = new FixedStepper();
   private water: Water;
+  private clouds: Clouds;
   private lastFrame = 0;
   private pauseOverlay: Overlay;
   private titleScreen: Overlay;
@@ -108,8 +110,10 @@ export class Game {
     this.terrain = createTerrain(WORLD_SEED);
     this.terrainMesh = createTerrainMesh(this.terrain);
     this.scene.add(this.terrainMesh);
-    this.water = createWater();
+    this.water = createWater(this.terrain);
     this.scene.add(this.water.mesh);
+    this.clouds = createClouds(WORLD_SEED + 4);
+    this.scene.add(this.clouds.group);
     this.harvestables = new Harvestables(this.terrain, createRng(WORLD_SEED + 2), this.scene);
     this.particles = new Particles(this.scene);
     this.sky = new Sky(this.ctx);
@@ -294,6 +298,7 @@ export class Game {
     this.sky.update(this.clock, this.player.position);
     this.followShadow();
     this.water.update(t / 1000);
+    this.clouds.update(t / 1000);
     this.particles.update(this.paused ? 0 : realDt);
     this.floaters.update(realDt, this.camera);
     this.monsters.faceCamera(this.camera);

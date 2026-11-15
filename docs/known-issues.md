@@ -47,14 +47,9 @@ Classés du plus visible pour un joueur au moins visible.
 - **Symptôme :** un lancer de rayon sur les 51 200 triangles du terrain à chaque pas de simulation (environ 2 ms mesurés, ~11 % d'une image à 60 fps).
 - **Piste :** viser une fois par image, ou avancer le long du rayon avec `terrain.heightAt`.
 
-### 9. Calcul inutile sur l'eau à chaque image
-- **Où :** `src/world/water.ts` (`computeVertexNormals()` dans `update`).
-- **Symptôme :** les normales sont recalculées à chaque image alors que `flatShading` ne s'en sert pas.
-- **Piste :** supprimer la ligne.
-
 ## Déploiement
 
-### 10. Actions GitHub sur Node 20
+### 9. Actions GitHub sur Node 20
 - **Où :** `.github/workflows/deploy.yml`.
 - **Symptôme :** GitHub signale que `actions/checkout@v4`, `actions/setup-node@v4`, `actions/configure-pages@v5`, `actions/upload-pages-artifact@v3` et `actions/deploy-pages@v4` visent Node 20, qui est retiré. Elles tournent pour l'instant de force sur Node 24 ; rien n'est cassé.
 - **Piste :** passer aux versions majeures suivantes de ces actions.
