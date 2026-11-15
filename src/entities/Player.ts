@@ -9,7 +9,12 @@ import type { WeaponId } from '../data/weapons';
 import type { InputState } from '../engine/input';
 import { createPlayerModel, createWeaponModel, type PlayerModel } from '../world/models';
 
-export type PlayerWorld = { terrain: TerrainQuery; collision?: CollisionWorld };
+export type PlayerWorld = {
+  terrain: TerrainQuery;
+  collision?: CollisionWorld;
+  /** Dessus d'un plancher sous (x, z), s'il y en a un atteignable. */
+  groundAt?: (x: number, z: number, y: number) => number | null;
+};
 
 const SWING_TIME = 0.25;
 
@@ -108,7 +113,8 @@ export class Player {
       this.velocityY = JUMP_VELOCITY;
       this.grounded = false;
     }
-    const ground = terrain.heightAt(this.position.x, this.position.z);
+    const floor = world.groundAt?.(this.position.x, this.position.z, this.position.y) ?? null;
+    const ground = Math.max(terrain.heightAt(this.position.x, this.position.z), floor ?? -Infinity);
     this.velocityY -= GRAVITY * dt;
     this.position.y += this.velocityY * dt;
     const stickToSlope = this.grounded && this.velocityY <= 0 && this.position.y - ground < 0.35;

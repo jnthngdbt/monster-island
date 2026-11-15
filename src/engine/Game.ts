@@ -11,10 +11,12 @@ import { BERRY_HUNGER, POTION_HEAL, WORLD_SEED } from '../data/balance';
 import { RECIPES, type Station } from '../data/recipes';
 import { ITEM_IDS, ITEMS, type Cost, type ItemId } from '../data/items';
 import { bestWeapon, WEAPONS, type WeaponId } from '../data/weapons';
+import { BuildController } from '../entities/BuildController';
 import { Harvestables } from '../entities/Harvestables';
 import type { Monster } from '../entities/Monster';
 import { Monsters } from '../entities/Monsters';
 import { Player } from '../entities/Player';
+import { Structures } from '../entities/Structures';
 import { ThirdPersonCamera } from '../entities/ThirdPersonCamera';
 import { CraftPanel } from '../ui/craftPanel';
 import { FloatingText } from '../ui/floatingText';
@@ -50,6 +52,9 @@ export class Game {
   readonly inventory = new Inventory({ stick: 1 });
   readonly harvestables: Harvestables;
   readonly monsters: Monsters;
+  readonly structures: Structures;
+  readonly build: BuildController;
+  readonly terrainMesh: THREE.Mesh;
   readonly particles: Particles;
   readonly floaters: FloatingText;
   readonly hud: Hud;
@@ -77,7 +82,8 @@ export class Game {
     this.scene = this.ctx.scene;
     this.camera = this.ctx.camera;
     this.terrain = createTerrain(WORLD_SEED);
-    this.scene.add(createTerrainMesh(this.terrain));
+    this.terrainMesh = createTerrainMesh(this.terrain);
+    this.scene.add(this.terrainMesh);
     this.water = createWater();
     this.scene.add(this.water.mesh);
     this.harvestables = new Harvestables(this.terrain, createRng(WORLD_SEED + 2), this.scene);
@@ -85,6 +91,7 @@ export class Game {
     this.sky = new Sky(this.ctx);
     this.monsters = new Monsters(this.scene, this.terrain, createRng(WORLD_SEED + 3), this.particles, this.events);
     this.monsters.maintainPopulation(0, this.terrain.spawnPoint);
+    this.structures = new Structures(this.terrain, this.scene, this.particles, this.events);
 
     this.player.teleport(this.terrain.spawnPoint.x, this.terrain.spawnPoint.z, this.terrain);
     this.player.yaw = Math.PI; // regarde vers l'intérieur de l'île
@@ -94,6 +101,17 @@ export class Game {
     this.cam.yaw = Math.PI;
 
     this.hud = new Hud(ui, this.events);
+    this.build = new BuildController(ui, {
+      scene: this.scene,
+      camera: this.camera,
+      terrainMesh: this.terrainMesh,
+      structures: this.structures,
+      inventory: this.inventory,
+      events: this.events,
+      obstacles: () => this.harvestables.colliders(),
+      player: () => ({ x: this.player.position.x, y: this.player.position.y, z: this.player.position.z, r: this.player.radius }),
+      cameraYaw: () => this.cam.yaw,
+    });
     this.floaters = new FloatingText(ui);
     this.inventory.onChange = () => {
       this.refreshWeapon();
@@ -120,8 +138,8 @@ export class Game {
   }
 
   /** Le joueur est-il près d'une station (atelier) ? Branché sur les structures. */
-  nearStation(_s: Station): boolean {
-    return false;
+  nearStation(s: Station): boolean {
+    return this.structures.nearStation(s, this.player.position);
   }
 
   start(): void {
@@ -140,7 +158,7 @@ export class Game {
   }
 
   collisionWorld(): CollisionWorld {
-    return { circles: this.harvestables.colliders(), boxes: [] };
+    return { circles: this.harvestables.colliders(), boxes: this.structures.colliders() };
   }
 
   private frame(t: number): void {
@@ -163,6 +181,8 @@ export class Game {
     this.particles.update(this.paused ? 0 : realDt);
     this.floaters.update(realDt, this.camera);
     this.monsters.faceCamera(this.camera);
+    this.build.render();
+    this.structures.setNightLight(Math.max(0, -this.clock.sunElevation * 3, this.clock.isNight ? 1 : 0));
     const v = this.player.vitals;
     this.hud.update({
       inventory: this.inventory,
@@ -193,14 +213,18 @@ export class Game {
     this.player.update(dt, this.now, this.input, this.cam.yaw, {
       terrain: this.terrain,
       collision: this.collisionWorld(),
+      groundAt: (x, z, y) => this.structures.groundAt(x, z, y),
     });
     this.player.vitals.tick(dt);
     this.handleEat();
     this.handlePotion();
     this.handleCraftKey();
     this.handleDodge();
-    this.handleAttack();
+    this.build.update(this.input);
+    if (this.input.consumePressed('KeyE')) this.structures.toggleDoor(this.player.position);
+    if (!this.build.active) this.handleAttack();
     this.harvestables.update(this.now);
+    this.structures.update(this.now);
     this.updateMonsters(dt);
     for (const { gained, at } of this.monsters.updatePickups(dt, this.now, this.player.position)) {
       this.give(gained, { x: at.x, y: at.y + 1, z: at.z });
@@ -215,9 +239,9 @@ export class Game {
       isNight: this.clock.isNight,
       now: this.now,
       collision: this.collisionWorld(),
-      nearestStructure: () => null,
+      nearestStructure: (from) => this.structures.nearestTarget(from),
       attackPlayer: (m, dmg) => this.hurtPlayer(m, dmg),
-      attackStructure: () => {},
+      attackStructure: (key, dmg) => this.structures.damage(key, dmg, this.now),
     });
   }
 

@@ -150,3 +150,27 @@ button.big:disabled {
 .recipe .cost.bad, .recipe .station.bad { color: var(--bad); }
 .recipe .station { font-size: 14px; margin-top: 2px; }
 .recipe button.big { font-size: 16px; padding: 6px 14px; }
+
+.buildbar {
+  position: absolute; left: 8px; right: 8px; bottom: 84px;
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 6px;
+}
+.buildbar .piece {
+  display: flex; flex-direction: column; align-items: center; min-width: 74px; padding: 4px 6px;
+  background: var(--paper); border: 3px solid var(--ink); border-radius: 12px; box-shadow: 0 3px 0 var(--ink);
+  position: relative; font-size: 12px;
+}
+.buildbar .piece.sel { background: #fff3b0; transform: translateY(-6px); }
+.buildbar .piece.poor { opacity: 0.55; }
+.buildbar .num {
+  position: absolute; top: -8px; left: -8px; width: 18px; height: 18px; border-radius: 50%;
+  background: var(--ink); color: #fff; font-size: 11px; display: flex; align-items: center; justify-content: center;
+}
+.buildbar .icon { font-size: 22px; }
+.buildbar .name { font-weight: bold; }
+.buildbar .help { flex-basis: 100%; text-align: center; color: #fff; font-weight: bold; text-shadow: 0 2px 0 var(--ink); font-size: 14px; }
+.buildstatus {
+  position: absolute; left: 50%; top: calc(50% + 22px); transform: translateX(-50%);
+  font-weight: bold; font-size: 16px; color: #fff; text-shadow: 0 2px 0 var(--ink), 0 0 4px var(--ink); white-space: nowrap;
+}
+.buildstatus.bad { color: #ffb3c6; }
