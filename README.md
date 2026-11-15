@@ -2,7 +2,7 @@
 
 Jeu de survie et de construction 3D low-poly, jouable dans le navigateur (Three.js + Vite).
 Pour les 8–12 ans : coloré, jamais effrayant, sans sang.
-Concept : [docs/game-concept.md](docs/game-concept.md) · Plan du MVP : [docs/superpowers/plans/2026-11-15-monster-island-mvp.md](docs/superpowers/plans/2026-11-15-monster-island-mvp.md).
+Concept : [docs/game-concept.md](docs/game-concept.md) · Plan du MVP : [docs/superpowers/plans/2026-11-15-monster-island-mvp.md](docs/superpowers/plans/2026-11-15-monster-island-mvp.md) · Problèmes connus : [docs/known-issues.md](docs/known-issues.md).
 
 ## La boucle de jeu
 
