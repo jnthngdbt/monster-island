@@ -7,7 +7,8 @@ import { Inventory } from '../core/inventory';
 import { FixedStepper } from '../core/loop';
 import { createRng, type Rng } from '../core/rng';
 import { createTerrain, type Terrain } from '../core/terrain';
-import { BERRY_HUNGER, POTION_HEAL, RAID_SPAWN_INTERVAL, WORLD_SEED } from '../data/balance';
+import { AUTOSAVE_SEC, BERRY_HUNGER, POTION_HEAL, RAID_SPAWN_INTERVAL, WORLD_SEED } from '../data/balance';
+import { SAVE_VERSION, SaveStore, type SaveData, type StorageLike } from '../core/save';
 import { planNightSpawns, raiderCap } from '../core/spawner';
 import { RECIPES, type Station } from '../data/recipes';
 import { ITEM_IDS, ITEMS, type Cost, type ItemId } from '../data/items';
@@ -41,6 +42,15 @@ const HARVEST_COLORS: Record<ItemId, string> = {
   stone_sword: '#c9ccd1',
   jelly_potion: '#9be07a',
 };
+
+/** localStorage peut être bloqué (lever une exception) : on joue alors sans sauvegarde. */
+function browserStorage(): StorageLike | null {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
 
 /** État du monde et boucle de jeu. Ordre des mises à jour : voir step(). */
 export class Game {
@@ -82,6 +92,9 @@ export class Game {
   /** title : écran d'accueil · playing : en jeu · ko : tombé dans les pommes. */
   state: 'title' | 'playing' | 'ko' = 'title';
   private playTime = 0;
+  private store = new SaveStore(browserStorage());
+  private nextSaveAt = AUTOSAVE_SEC;
+  private wasPaused = true;
 
   constructor(
     readonly canvas: HTMLCanvasElement,
@@ -132,11 +145,27 @@ export class Game {
 
     this.input.attachDom(canvas);
     this.pauseOverlay = createPauseScreen(ui, () => this.input.requestLock(canvas));
-    this.titleScreen = createTitleScreen(ui, () => {
+    const saved = this.store.load();
+    const begin = () => {
       this.state = 'playing';
       this.titleScreen.hide();
       this.input.requestLock(canvas);
+    };
+    this.titleScreen = createTitleScreen(ui, {
+      saveDay: saved?.clock.day ?? null,
+      onContinue: () => {
+        begin();
+        if (saved) this.applySave(saved);
+      },
+      onNewGame: () => {
+        this.store.clear();
+        begin();
+      },
     });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') this.saveNow();
+    });
+    window.addEventListener('pagehide', () => this.saveNow());
     this.koScreen = createKoScreen(ui, () => this.respawn());
     this.hints = new Hints(ui);
     this.titleScreen.show();
@@ -163,6 +192,57 @@ export class Game {
     this.koScreen.hide();
     this.state = 'playing';
     this.input.requestLock(this.canvas);
+  }
+
+  /** Sauvegarde la partie en cours (jamais depuis l'écran titre : le monde y est neuf). */
+  private saveNow(): void {
+    if (this.state === 'title') return;
+    this.store.write(this.collectSave());
+  }
+
+  private collectSave(): SaveData {
+    const p = this.player.position;
+    const v = this.player.vitals;
+    return {
+      version: SAVE_VERSION,
+      savedAt: Date.now(),
+      now: this.now,
+      playTime: this.playTime,
+      clock: { t: this.clock.t, day: this.clock.day },
+      player: { x: p.x, y: p.y, z: p.z, yaw: this.player.yaw, health: v.health, hunger: v.hunger },
+      inventory: this.inventory.snapshot(),
+      structures: this.structures.snapshot(),
+      harvest: this.harvestables.snapshot(),
+    };
+  }
+
+  /** Reprend une partie sauvegardée. Appelé une fois, juste après l'écran titre. */
+  private applySave(d: SaveData): void {
+    this.now = d.now;
+    this.playTime = d.playTime;
+    this.nextSaveAt = d.playTime + AUTOSAVE_SEC;
+    this.clock.restore(d.clock.t, d.clock.day);
+
+    // Sac remplacé sans toast « Nouvelle arme » : l'arme vient de la sauvegarde.
+    const onChange = this.inventory.onChange;
+    this.inventory.onChange = undefined;
+    this.inventory.remove(this.inventory.snapshot());
+    this.inventory.addAll(d.inventory);
+    this.inventory.onChange = onChange;
+    this.refreshWeapon(false);
+    this.events.emit('itemsChanged', {});
+
+    this.structures.restore(d.structures);
+    this.harvestables.restore(d.harvest);
+
+    this.player.position.set(d.player.x, d.player.y, d.player.z);
+    this.player.yaw = d.player.yaw;
+    this.cam.yaw = d.player.yaw;
+    this.player.vitals.health = d.player.health;
+    this.player.vitals.hunger = d.player.hunger;
+
+    if (this.clock.isNight) this.nextRaidAt = this.now + 3;
+    if (this.player.vitals.isDead) this.respawn();
   }
 
   /** Le joueur est-il près d'une station (atelier) ? Branché sur les structures. */
@@ -194,7 +274,10 @@ export class Game {
     this.lastFrame = t;
     this.koScreen.tick(t);
     if (this.state === 'title') this.cam.yaw += realDt * 0.08;
-    if (this.paused) {
+    const paused = this.paused;
+    if (paused && !this.wasPaused) this.saveNow();
+    this.wasPaused = paused;
+    if (paused) {
       if (this.state === 'playing' && !this.craftPanel.open) this.pauseOverlay.show();
       else this.pauseOverlay.hide();
     } else {
@@ -251,6 +334,10 @@ export class Game {
   private step(dt: number): void {
     this.now += dt;
     this.playTime += dt;
+    if (this.playTime >= this.nextSaveAt) {
+      this.nextSaveAt = this.playTime + AUTOSAVE_SEC;
+      this.saveNow();
+    }
     this.handleDebugKeys();
     for (const ev of this.clock.tick(dt)) {
       if (ev === 'nightStarted') {
@@ -398,13 +485,13 @@ export class Game {
     this.events.emit('harvested', { ...at, gained });
   }
 
-  private refreshWeapon(): void {
+  private refreshWeapon(announce = true): void {
     const best = bestWeapon(this.inventory);
     if (best === this.weapon) return;
     this.weapon = best;
     this.attackTimer = new AttackTimer(WEAPONS[best].cooldown);
     this.player.setWeapon(best);
-    this.events.emit('toast', { text: `Nouvelle arme : ${ITEMS[best].label} !` });
+    if (announce) this.events.emit('toast', { text: `Nouvelle arme : ${ITEMS[best].label} !` });
   }
 
   private followShadow(): void {

@@ -27,6 +27,15 @@ Concept : [docs/game-concept.md](docs/game-concept.md) · Plan du MVP : [docs/su
 | Ouvrir/fermer une porte | E |
 | Pause | Échap |
 
+## Sauvegarde
+
+La partie se sauvegarde toute seule dans le navigateur (`localStorage`, clé `monster-island:save`) :
+toutes les 30 secondes de jeu, à la pause et quand on ferme l'onglet. L'écran titre propose alors
+« Continuer » ou « Nouvelle partie ».
+
+Limites : la sauvegarde reste dans ce navigateur, sur cet ordinateur. Elle disparaît si on efface les
+données du site ou en navigation privée. `localhost` et la version GitHub Pages ont des sauvegardes séparées.
+
 Mode debug : ajouter `?debug=1` à l'adresse (N = nuit, K = +20 ressources, compteur d'images).
 
 ## Jouer en local

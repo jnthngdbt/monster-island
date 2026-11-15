@@ -30,18 +30,49 @@ export const CONTROLS_HTML = `
     <div><kbd>Échap</kbd> pause</div>
   </div>`;
 
-export function createTitleScreen(root: HTMLElement, onPlay: () => void): Overlay {
+export type TitleOptions = {
+  /** Jour de la partie sauvegardée, ou null s'il n'y en a pas. */
+  saveDay: number | null;
+  onContinue: () => void;
+  onNewGame: () => void;
+};
+
+/** Écran d'accueil. Avec une sauvegarde : Continuer / Nouvelle partie (avec confirmation). */
+export function createTitleScreen(root: HTMLElement, opts: TitleOptions): Overlay {
+  const choices =
+    opts.saveDay === null
+      ? `<div class="title-choices"><button class="big play">Jouer</button></div>`
+      : `<div class="title-choices">
+           <button class="big continue">Continuer — Jour ${opts.saveDay}</button>
+           <button class="big secondary new-game">Nouvelle partie</button>
+         </div>
+         <div class="title-confirm" style="display:none">
+           <p>Ta partie sera effacée. Sûr ?</p>
+           <button class="big danger yes">Oui</button>
+           <button class="big secondary no">Non</button>
+         </div>`;
   const o = createOverlay(
     root,
     `<div class="panel title">
        <h1 class="logo">Monster Island</h1>
        <p>Explore l'île, récolte, affronte les monstres et construis ta base pour survivre à la nuit !</p>
        ${CONTROLS_HTML}
-       <button class="big play">Jouer</button>
+       ${choices}
      </div>`,
     'overlay title-screen',
   );
-  o.el.querySelector('.play')!.addEventListener('click', onPlay);
+  const q = (sel: string) => o.el.querySelector<HTMLElement>(sel);
+  const pick = q('.title-choices')!;
+  const confirm = q('.title-confirm');
+  const showConfirm = (yes: boolean) => {
+    pick.style.display = yes ? 'none' : '';
+    if (confirm) confirm.style.display = yes ? '' : 'none';
+  };
+  q('.play')?.addEventListener('click', opts.onNewGame);
+  q('.continue')?.addEventListener('click', opts.onContinue);
+  q('.new-game')?.addEventListener('click', () => showConfirm(true));
+  q('.no')?.addEventListener('click', () => showConfirm(false));
+  q('.yes')?.addEventListener('click', opts.onNewGame);
   return o;
 }
 

@@ -38,6 +38,8 @@ export const RAIDER_BASE = 3;
 export const RAIDER_PER_NIGHT = 2;
 export const RAIDER_MAX = 12;
 export const RAID_SPAWN_INTERVAL = 20;
+/** Sauvegarde automatique toutes les N secondes de jeu. */
+export const AUTOSAVE_SEC = 30;
 export const RAID_RING: readonly [number, number] = [18, 26];
 export const RAID_MIN_PLAYER_DIST = 15;
 

@@ -185,6 +185,12 @@ kbd {
 }
 .title-screen { background: rgba(30, 42, 90, 0.15); cursor: default; }
 .panel.title { max-width: 620px; }
+.title-choices, .title-confirm {
+  display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; align-items: center; margin-top: 10px;
+}
+.title-confirm p { flex-basis: 100%; }
+button.big.secondary { background: #8a93b8; }
+button.big.danger { background: #e05a4f; }
 .logo {
   font-size: 64px !important; line-height: 1; letter-spacing: 1px;
   color: #7be07b !important; text-shadow: 0 4px 0 var(--ink), 0 8px 0 #2a6 !important;
