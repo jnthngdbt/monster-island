@@ -229,6 +229,22 @@ export class Game {
       phase: this.clock.phaseProgress,
     });
     this.ctx.renderer.render(this.scene, this.camera);
+    if (this.debug) this.updateDebugInfo(realDt);
+  }
+
+  private debugEl: HTMLDivElement | null = null;
+  private fps = 60;
+
+  /** ?debug=1 : images/s et nombre d'appels de dessin. */
+  private updateDebugInfo(realDt: number): void {
+    if (!this.debugEl) {
+      this.debugEl = document.createElement('div');
+      this.debugEl.className = 'debuginfo';
+      this.ui.appendChild(this.debugEl);
+    }
+    if (realDt > 0) this.fps += (1 / realDt - this.fps) * 0.05;
+    const info = this.ctx.renderer.info.render;
+    this.debugEl.textContent = `${Math.round(this.fps)} fps · ${info.calls} draw calls · ${info.triangles} tris`;
   }
 
   /** Un pas de simulation : input → clock → player → monsters → structures → pickups → spawner. */
