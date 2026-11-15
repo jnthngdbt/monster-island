@@ -40,3 +40,7 @@ export const RAIDER_MAX = 12;
 export const RAID_SPAWN_INTERVAL = 20;
 export const RAID_RING: readonly [number, number] = [18, 26];
 export const RAID_MIN_PLAYER_DIST = 15;
+
+// Réapparition
+export const RESPAWN_INVULN = 3;
+export const RESPAWN_MIN_HUNGER = 50;

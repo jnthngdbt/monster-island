@@ -23,7 +23,8 @@ import { ThirdPersonCamera } from '../entities/ThirdPersonCamera';
 import { CraftPanel } from '../ui/craftPanel';
 import { FloatingText } from '../ui/floatingText';
 import { Hud } from '../ui/hud';
-import { createOverlay, type Overlay } from '../ui/screens';
+import { createKoScreen, createPauseScreen, createTitleScreen, Hints, type KoScreen, type Overlay } from '../ui/screens';
+import { applyRespawn, chooseRespawnPoint } from '../core/respawn';
 import { Particles } from '../world/particles';
 import { Sky } from '../world/sky';
 import { createTerrainMesh } from '../world/terrainMesh';
@@ -74,6 +75,12 @@ export class Game {
   private water: Water;
   private lastFrame = 0;
   private pauseOverlay: Overlay;
+  private titleScreen: Overlay;
+  private koScreen: KoScreen;
+  private hints: Hints;
+  /** title : écran d'accueil · playing : en jeu · ko : tombé dans les pommes. */
+  state: 'title' | 'playing' | 'ko' = 'title';
+  private playTime = 0;
 
   constructor(
     readonly canvas: HTMLCanvasElement,
@@ -126,22 +133,38 @@ export class Game {
     };
 
     this.input.attachDom(canvas);
-    this.pauseOverlay = createOverlay(
-      ui,
-      '<div class="panel"><h1>Pause</h1><p>Clique pour continuer</p></div>',
-    );
-    this.pauseOverlay.el.addEventListener('click', () => this.input.requestLock(canvas));
+    this.pauseOverlay = createPauseScreen(ui, () => this.input.requestLock(canvas));
+    this.titleScreen = createTitleScreen(ui, () => {
+      this.state = 'playing';
+      this.titleScreen.hide();
+      this.input.requestLock(canvas);
+    });
+    this.koScreen = createKoScreen(ui, () => this.respawn());
+    this.hints = new Hints(ui);
+    this.titleScreen.show();
     this.craftPanel = new CraftPanel(ui, {
       inventory: this.inventory,
       nearStation: (st) => this.nearStation(st),
       onCrafted: (id) => this.events.emit('toast', { text: `${ITEMS[RECIPES[id].output].icon} ${RECIPES[id].label} fabriquée !` }),
       onClose: () => this.input.requestLock(canvas),
     });
-    canvas.addEventListener('click', () => this.input.requestLock(canvas));
+    canvas.addEventListener('click', () => {
+      if (this.state === 'playing' && !this.craftPanel.open) this.input.requestLock(canvas);
+    });
   }
 
   get paused(): boolean {
-    return !this.input.locked || this.craftPanel.open;
+    return this.state !== 'playing' || !this.input.locked || this.craftPanel.open;
+  }
+
+  /** Le joueur se relève au dernier feu de camp (ou sur la plage), avec tout son sac. */
+  private respawn(): void {
+    const p = chooseRespawnPoint(this.structures.campfires(), this.terrain.spawnPoint);
+    this.player.teleport(p.x, p.z, this.terrain);
+    applyRespawn(this.player.vitals, this.now);
+    this.koScreen.hide();
+    this.state = 'playing';
+    this.input.requestLock(this.canvas);
   }
 
   /** Le joueur est-il près d'une station (atelier) ? Branché sur les structures. */
@@ -171,9 +194,11 @@ export class Game {
   private frame(t: number): void {
     const realDt = Math.min((t - this.lastFrame) / 1000, 0.25);
     this.lastFrame = t;
+    this.koScreen.tick(t);
+    if (this.state === 'title') this.cam.yaw += realDt * 0.08;
     if (this.paused) {
-      if (this.craftPanel.open) this.pauseOverlay.hide();
-      else this.pauseOverlay.show();
+      if (this.state === 'playing' && !this.craftPanel.open) this.pauseOverlay.show();
+      else this.pauseOverlay.hide();
     } else {
       this.pauseOverlay.hide();
       this.stepper.advance(realDt, (dt) => {
@@ -189,6 +214,9 @@ export class Game {
     this.floaters.update(realDt, this.camera);
     this.monsters.faceCamera(this.camera);
     this.build.render();
+    this.hints.update(this.state === 'playing' ? this.playTime : Infinity);
+    // Clignote pendant l'invulnérabilité de réapparition.
+    this.player.mesh.visible = !(this.now < this.player.vitals.invulnerableUntil && Math.floor(t / 100) % 2 === 0);
     this.structures.setNightLight(Math.max(0, -this.clock.sunElevation * 3, this.clock.isNight ? 1 : 0));
     const v = this.player.vitals;
     this.hud.update({
@@ -206,6 +234,7 @@ export class Game {
   /** Un pas de simulation : input → clock → player → monsters → structures → pickups → spawner. */
   private step(dt: number): void {
     this.now += dt;
+    this.playTime += dt;
     this.handleDebugKeys();
     for (const ev of this.clock.tick(dt)) {
       if (ev === 'nightStarted') {
@@ -226,6 +255,10 @@ export class Game {
       groundAt: (x, z, y) => this.structures.groundAt(x, z, y),
     });
     this.player.vitals.tick(dt);
+    if (this.player.vitals.isDead) {
+      this.knockOut();
+      return;
+    }
     this.handleEat();
     this.handlePotion();
     this.handleCraftKey();
@@ -273,6 +306,13 @@ export class Game {
     this.player.knockFrom(m.position);
     this.hud.flashHurt();
     this.events.emit('playerDamaged', { amount: damage });
+  }
+
+  private knockOut(): void {
+    this.state = 'ko';
+    this.build.setActive(false);
+    document.exitPointerLock();
+    this.koScreen.open(performance.now());
   }
 
   private handleDodge(): void {

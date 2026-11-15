@@ -174,3 +174,26 @@ button.big:disabled {
   font-weight: bold; font-size: 16px; color: #fff; text-shadow: 0 2px 0 var(--ink), 0 0 4px var(--ink); white-space: nowrap;
 }
 .buildstatus.bad { color: #ffb3c6; }
+
+.controls {
+  display: grid; gap: 4px; margin: 12px auto; text-align: left; font-size: 15px;
+  background: #fff; border: 3px solid var(--ink); border-radius: 12px; padding: 10px 14px; width: fit-content;
+}
+kbd {
+  display: inline-block; padding: 1px 6px; border: 2px solid var(--ink); border-bottom-width: 3px;
+  border-radius: 6px; background: var(--paper); font-family: var(--font); font-weight: bold; font-size: 13px;
+}
+.title-screen { background: rgba(30, 42, 90, 0.15); cursor: default; }
+.panel.title { max-width: 620px; }
+.logo {
+  font-size: 64px !important; line-height: 1; letter-spacing: 1px;
+  color: #7be07b !important; text-shadow: 0 4px 0 var(--ink), 0 8px 0 #2a6 !important;
+  animation: bob 2.4s ease-in-out infinite;
+}
+@keyframes bob { 50% { transform: translateY(-6px) rotate(-1deg); } }
+.overlay.ko { background: rgba(255, 150, 190, 0.35); cursor: default; }
+.hint {
+  position: absolute; left: 50%; bottom: 150px; transform: translateX(-50%);
+  background: rgba(43, 45, 66, 0.8); color: #fff; padding: 6px 14px; border-radius: 12px;
+  font-weight: bold; font-size: 16px; white-space: nowrap;
+}

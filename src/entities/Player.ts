@@ -45,6 +45,7 @@ export class Player {
     this.position.set(x, terrain.heightAt(x, z), z);
     this.velocityY = 0;
     this.grounded = true;
+    this.push = { x: 0, z: 0 };
   }
 
   setWeapon(id: WeaponId): void {
