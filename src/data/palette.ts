@@ -1,0 +1,21 @@
+/** Palette vive et douce du jeu. */
+export const PALETTE = {
+  sky: '#8fd3ff',
+  sand: '#f2d58a',
+  grass: '#6cc24a',
+  clearing: '#9be07a',
+  rock: '#9a9a9a',
+  seabed: '#e0be6e',
+  water: '#3fb8e8',
+  trunk: '#8a5a33',
+  leaves: '#3fa34d',
+  leavesLight: '#5fc35a',
+  stone: '#a7a9ac',
+  bush: '#4caf50',
+  berry: '#4a62d8',
+  slime: '#6fe36f',
+  raider: '#8a6cff',
+  wood: '#c08a52',
+  woodDark: '#8d5f34',
+  player: { skin: '#ffd2a8', shirt: '#2ec4b6', pants: '#3d5a80', backpack: '#ff9f1c', hair: '#6b3e26' },
+} as const;
