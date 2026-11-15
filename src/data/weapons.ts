@@ -11,8 +11,8 @@ export type WeaponDef = {
 };
 
 export const WEAPONS: Record<WeaponId, WeaponDef> = {
-  stick: { damage: 10, cooldown: 0.5, range: 2.2, arcDeg: 90, harvestPower: 1 },
-  stone_sword: { damage: 20, cooldown: 0.45, range: 2.6, arcDeg: 100, harvestPower: 2 },
+  stick: { damage: 8, cooldown: 0.25, range: 2.2, arcDeg: 90, harvestPower: 1 },
+  stone_sword: { damage: 12, cooldown: 0.22, range: 2.6, arcDeg: 100, harvestPower: 2 },
 };
 
 /** Arme possédée qui fait le plus de dégâts ; le bâton par défaut. */

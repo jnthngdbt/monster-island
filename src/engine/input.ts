@@ -6,6 +6,7 @@ export class InputState {
   private down = new Set<string>();
   private pressed = new Set<string>();
   private clicks = new Set<number>();
+  private buttons = new Set<number>();
   private dx = 0;
   private dy = 0;
   wheel = 0;
@@ -32,6 +33,16 @@ export class InputState {
 
   click(button: number): void {
     this.clicks.add(button);
+    this.buttons.add(button);
+  }
+
+  releaseButton(button: number): void {
+    this.buttons.delete(button);
+  }
+
+  /** Bouton de souris tenu enfoncé (pour frapper en continu). */
+  isButtonDown(button: 0 | 2): boolean {
+    return this.buttons.has(button);
   }
 
   consumeClick(button: 0 | 2): boolean {
@@ -69,6 +80,7 @@ export class InputState {
     this.down.clear();
     this.pressed.clear();
     this.clicks.clear();
+    this.buttons.clear();
     this.dx = 0;
     this.dy = 0;
     this.wheel = 0;
@@ -86,6 +98,7 @@ export class InputState {
     window.addEventListener('mousedown', (e) => {
       if (this.locked) this.click(e.button);
     });
+    window.addEventListener('mouseup', (e) => this.releaseButton(e.button));
     window.addEventListener('wheel', (e) => {
       if (this.locked) this.wheel += Math.sign(e.deltaY);
     }, { passive: true });

@@ -470,7 +470,9 @@ export class Game {
   }
 
   private handleAttack(): void {
-    if (!this.input.consumeClick(0)) return;
+    // Un clic, ou le bouton tenu : on refrappe dès que le cooldown le permet.
+    const clicked = this.input.consumeClick(0);
+    if (!clicked && !this.input.isButtonDown(0)) return;
     if (!this.attackTimer.tryFire(this.now)) return;
     const w = WEAPONS[this.weapon];
     const p = this.player.position;

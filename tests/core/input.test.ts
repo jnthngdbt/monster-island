@@ -18,3 +18,16 @@ test('consumePressed ne déclenche qu\'une fois par appui', () => {
   i.press('KeyB');
   expect(i.consumePressed('KeyB')).toBe(true);
 });
+
+test('bouton de souris tenu jusqu\'au relâchement', () => {
+  const i = new InputState();
+  i.click(0);
+  i.endStep(); // le clic est oublié, le bouton reste tenu
+  expect(i.consumeClick(0)).toBe(false);
+  expect(i.isButtonDown(0)).toBe(true);
+  i.releaseButton(0);
+  expect(i.isButtonDown(0)).toBe(false);
+  i.click(0);
+  i.releaseAll();
+  expect(i.isButtonDown(0)).toBe(false);
+});

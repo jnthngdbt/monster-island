@@ -16,7 +16,7 @@ export type PlayerWorld = {
   groundAt?: (x: number, z: number, y: number) => number | null;
 };
 
-const SWING_TIME = 0.25;
+const SWING_TIME = 0.2;
 
 export class Player {
   readonly position = new THREE.Vector3();
