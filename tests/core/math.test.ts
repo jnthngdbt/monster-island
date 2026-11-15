@@ -1,4 +1,4 @@
-import { angleDelta, forwardFromYaw, moveVector, orbitPosition } from '../../src/core/math';
+import { angleDelta, forwardFromYaw, moveVector, nearestPoints, orbitPosition } from '../../src/core/math';
 
 test('forwardFromYaw(0) = +Z', () => {
   const f = forwardFromYaw(0);
@@ -34,6 +34,12 @@ test('diagonale normalisée', () => {
 test('aucune touche = vecteur nul', () => {
   const v = moveVector(keys({}), 1);
   expect(v).toEqual({ x: 0, z: 0 });
+});
+
+test('nearestPoints : les N plus proches, du plus proche au plus loin', () => {
+  const pts = [{ x: 10, z: 0 }, { x: 1, z: 0 }, { x: 5, z: 0 }, { x: -2, z: 0 }];
+  expect(nearestPoints(pts, { x: 0, z: 0 }, 2)).toEqual([{ x: 1, z: 0 }, { x: -2, z: 0 }]);
+  expect(nearestPoints([], { x: 0, z: 0 }, 3)).toEqual([]);
 });
 
 test('caméra derrière', () => {

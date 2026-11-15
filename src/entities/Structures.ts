@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { BuildGrid, type Placement } from '../core/buildGrid';
-import type { AABB } from '../core/collision';
+import { circleHitsAABB, type AABB, type Circle } from '../core/collision';
 import type { Target } from '../core/combat';
 import type { EventBus, GameEvents } from '../core/events';
 import { dist2D, type Vec2 } from '../core/math';
@@ -196,8 +196,14 @@ export class Structures {
     }
   }
 
-  /** La lumière des feux de camp ne brille que la nuit (et un peu au crépuscule). */
-  setNightLight(k: number): void {
-    for (const pc of this.pieces.values()) if (pc.model.light) pc.model.light.intensity = 0.4 + k * 2.6;
+  /** Position 3D des feux de camp (pour les lumières). */
+  campfireSpots(): { x: number; y: number; z: number }[] {
+    return [...this.pieces.values()].filter((pc) => pc.p.kind === 'campfire').map((pc) => ({ x: pc.p.x, y: pc.p.y, z: pc.p.z }));
+  }
+
+  /** Une construction (n'importe laquelle) recouvre-t-elle ce cercle ? */
+  overlaps(c: Circle): boolean {
+    for (const pc of this.pieces.values()) if (circleHitsAABB(c, this.grid.footprint(pc.p))) return true;
+    return false;
   }
 }

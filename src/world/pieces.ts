@@ -10,9 +10,8 @@ export type PieceModel = {
   group: THREE.Group;
   /** Battant de porte (pivot) — seulement pour les portes. */
   doorLeaf?: THREE.Group;
-  /** Flammes animées et lumière — seulement pour le feu de camp. */
+  /** Flammes animées — seulement pour le feu de camp. */
   flames?: THREE.Mesh[];
-  light?: THREE.PointLight;
 };
 
 function box(w: number, h: number, d: number, color: string, x: number, y: number, z: number): THREE.Mesh {
@@ -93,10 +92,7 @@ export function createPieceModel(kind: PieceKind): PieceModel {
       flames[0].position.y = 0.5;
       flames[1].position.y = 0.45;
       g.add(...flames);
-      const light = new THREE.PointLight('#ffb347', 0, 10, 1.5);
-      light.position.y = 0.9;
-      g.add(light);
-      return { group: g, flames, light };
+      return { group: g, flames };
     }
     case 'workbench': {
       g.add(box(1.2, 0.12, 0.7, W, 0, 0.8, 0));

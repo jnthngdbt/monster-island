@@ -26,6 +26,7 @@ import { Hud } from '../ui/hud';
 import { createKoScreen, createPauseScreen, createTitleScreen, Hints, type KoScreen, type Overlay } from '../ui/screens';
 import { applyRespawn, chooseRespawnPoint } from '../core/respawn';
 import { Particles } from '../world/particles';
+import { CampfireLights } from '../world/campfireLights';
 import { Sky } from '../world/sky';
 import { createTerrainMesh } from '../world/terrainMesh';
 import { createWater, type Water } from '../world/water';
@@ -65,6 +66,7 @@ export class Game {
   readonly rng: Rng;
   readonly clock = new DayNightClock();
   readonly sky: Sky;
+  private campfireLights: CampfireLights;
   readonly debug: boolean;
   weapon: WeaponId = 'stick';
   /** Temps simulé (s). */
@@ -99,6 +101,7 @@ export class Game {
     this.harvestables = new Harvestables(this.terrain, createRng(WORLD_SEED + 2), this.scene);
     this.particles = new Particles(this.scene);
     this.sky = new Sky(this.ctx);
+    this.campfireLights = new CampfireLights(this.scene);
     this.monsters = new Monsters(this.scene, this.terrain, createRng(WORLD_SEED + 3), this.particles, this.events);
     this.monsters.maintainPopulation(0, this.terrain.spawnPoint);
     this.structures = new Structures(this.terrain, this.scene, this.particles, this.events);
@@ -159,7 +162,7 @@ export class Game {
 
   /** Le joueur se relève au dernier feu de camp (ou sur la plage), avec tout son sac. */
   private respawn(): void {
-    const p = chooseRespawnPoint(this.structures.campfires(), this.terrain.spawnPoint);
+    const p = chooseRespawnPoint(this.structures.campfires(), this.terrain.spawnPoint, this.terrain.isWalkable);
     this.player.teleport(p.x, p.z, this.terrain);
     applyRespawn(this.player.vitals, this.now);
     this.koScreen.hide();
@@ -217,7 +220,9 @@ export class Game {
     this.hints.update(this.state === 'playing' ? this.playTime : Infinity);
     // Clignote pendant l'invulnérabilité de réapparition.
     this.player.mesh.visible = !(this.now < this.player.vitals.invulnerableUntil && Math.floor(t / 100) % 2 === 0);
-    this.structures.setNightLight(Math.max(0, -this.clock.sunElevation * 3, this.clock.isNight ? 1 : 0));
+    // 0 le jour, monte au crépuscule, 1 la nuit.
+    const nightK = this.clock.isNight ? 1 : Math.min(1, Math.max(0, 1 - this.clock.sunElevation * 4));
+    this.campfireLights.update(this.structures.campfireSpots(), this.player.position, nightK, t / 1000);
     const v = this.player.vitals;
     this.hud.update({
       inventory: this.inventory,
@@ -282,7 +287,7 @@ export class Game {
     this.build.update(this.input);
     if (this.input.consumePressed('KeyE')) this.structures.toggleDoor(this.player.position);
     if (!this.build.active) this.handleAttack();
-    this.harvestables.update(this.now);
+    this.harvestables.update(this.now, (c) => this.structures.overlaps(c));
     this.structures.update(this.now);
     this.updateMonsters(dt);
     for (const { gained, at } of this.monsters.updatePickups(dt, this.now, this.player.position)) {

@@ -1,5 +1,7 @@
 import { applyRespawn, chooseRespawnPoint } from '../../src/core/respawn';
+import { createTerrain } from '../../src/core/terrain';
 import { Vitals } from '../../src/core/vitals';
+import { WORLD_SEED } from '../../src/data/balance';
 
 test('réapparaît au dernier feu de camp', () => {
   expect(chooseRespawnPoint([{ x: 0, z: 0 }, { x: 10, z: 10 }], { x: 99, z: 99 })).toEqual({ x: 10, z: 11.5 });
@@ -7,6 +9,18 @@ test('réapparaît au dernier feu de camp', () => {
 
 test('sinon à la plage', () => {
   expect(chooseRespawnPoint([], { x: 5, z: 80 })).toEqual({ x: 5, z: 80 });
+});
+
+test("feu de camp au bord de l'eau : jamais de réapparition dans la mer", () => {
+  const t = createTerrain(WORLD_SEED);
+  // Feu de camp valide trouvé par la revue : z + 1,5 tombe dans l'eau.
+  const p = chooseRespawnPoint([{ x: -67, z: 17 }], t.spawnPoint, t.isWalkable);
+  expect(t.isWalkable(p.x, p.z)).toBe(true);
+  expect(Math.hypot(p.x + 67, p.z - 17)).toBeLessThan(3);
+});
+
+test('aucune place autour du feu : retour à la plage', () => {
+  expect(chooseRespawnPoint([{ x: 0, z: 0 }], { x: 5, z: 80 }, () => false)).toEqual({ x: 5, z: 80 });
 });
 
 test('respawn : santé pleine, faim ≥ 50, invulnérable 3 s', () => {

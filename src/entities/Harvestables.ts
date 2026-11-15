@@ -25,6 +25,7 @@ export type HarvestNode = {
 };
 
 const KINDS: HarvestKind[] = ['tree', 'rock', 'bush'];
+const RETRY_SEC = 15;
 
 /** Arbres, rochers et buissons de l'île. */
 export class Harvestables {
@@ -80,9 +81,17 @@ export class Harvestables {
     return { [def.item]: def.yieldPerHit * power };
   }
 
-  update(now: number): void {
+  /**
+   * Repousse les ressources épuisées. `blocked` : une construction occupe la place —
+   * la repousse est alors remise à plus tard (jamais d'arbre à travers un plancher).
+   */
+  update(now: number, blocked: (c: Circle) => boolean = () => false): void {
     for (const n of this.nodes) {
       if (n.respawnAt !== null && now >= n.respawnAt) {
+        if (blocked({ x: n.x, z: n.z, r: HARVESTABLES[n.kind].radius * n.scale })) {
+          n.respawnAt = now + RETRY_SEC;
+          continue;
+        }
         n.respawnAt = null;
         n.hitsLeft = HARVESTABLES[n.kind].hits;
         n.growStart = now;

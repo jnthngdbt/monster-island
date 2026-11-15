@@ -46,3 +46,8 @@ export function orbitPosition(target: Vec3, yaw: number, pitch: number, distance
     z: target.z - Math.cos(yaw) * Math.cos(pitch) * distance,
   };
 }
+
+/** Les n points les plus proches de `from`, du plus proche au plus loin. */
+export function nearestPoints<T extends Vec2>(points: readonly T[], from: Vec2, n: number): T[] {
+  return [...points].sort((a, b) => dist2D(a, from) - dist2D(b, from)).slice(0, n);
+}
