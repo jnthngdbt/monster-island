@@ -29,4 +29,6 @@ export type GameEvents = {
   itemsChanged: Record<string, never>;
   harvested: { x: number; y: number; z: number; gained: Cost };
   playerDamaged: { amount: number };
+  nightStarted: { day: number };
+  dayStarted: { day: number };
 };

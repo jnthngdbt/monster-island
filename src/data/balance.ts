@@ -23,3 +23,8 @@ export const STARVE_DAMAGE_PER_SEC = 1;
 export const REGEN_PER_SEC = 0.5;
 export const REGEN_MIN_HUNGER = 60;
 export const BERRY_HUNGER = 15;
+
+// Jour / nuit
+export const DAY_CYCLE_SEC = 600;
+export const NIGHT_START = 0.7;
+export const START_TIME = 0.02;

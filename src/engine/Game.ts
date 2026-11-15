@@ -1,13 +1,14 @@
 import type * as THREE from 'three';
 import type { CollisionWorld } from '../core/collision';
 import { AttackTimer, selectTarget } from '../core/combat';
+import { DayNightClock } from '../core/dayNight';
 import { EventBus, type GameEvents } from '../core/events';
 import { Inventory } from '../core/inventory';
 import { FixedStepper } from '../core/loop';
 import { createRng, type Rng } from '../core/rng';
 import { createTerrain, type Terrain } from '../core/terrain';
 import { BERRY_HUNGER, WORLD_SEED } from '../data/balance';
-import { ITEMS, type Cost, type ItemId } from '../data/items';
+import { ITEM_IDS, ITEMS, type Cost, type ItemId } from '../data/items';
 import { bestWeapon, WEAPONS, type WeaponId } from '../data/weapons';
 import { Harvestables } from '../entities/Harvestables';
 import { Player } from '../entities/Player';
@@ -16,6 +17,7 @@ import { FloatingText } from '../ui/floatingText';
 import { Hud } from '../ui/hud';
 import { createOverlay, type Overlay } from '../ui/screens';
 import { Particles } from '../world/particles';
+import { Sky } from '../world/sky';
 import { createTerrainMesh } from '../world/terrainMesh';
 import { createWater, type Water } from '../world/water';
 import { InputState } from './input';
@@ -47,6 +49,8 @@ export class Game {
   readonly floaters: FloatingText;
   readonly hud: Hud;
   readonly rng: Rng;
+  readonly clock = new DayNightClock();
+  readonly sky: Sky;
   readonly debug: boolean;
   weapon: WeaponId = 'stick';
   /** Temps simulé (s). */
@@ -72,6 +76,7 @@ export class Game {
     this.scene.add(this.water.mesh);
     this.harvestables = new Harvestables(this.terrain, createRng(WORLD_SEED + 2), this.scene);
     this.particles = new Particles(this.scene);
+    this.sky = new Sky(this.ctx);
 
     this.player.teleport(this.terrain.spawnPoint.x, this.terrain.spawnPoint.z, this.terrain);
     this.player.yaw = Math.PI; // regarde vers l'intérieur de l'île
@@ -132,18 +137,37 @@ export class Game {
       });
     }
     this.cam.update(this.input, this.player.position, this.terrain);
+    this.sky.update(this.clock, this.player.position);
     this.followShadow();
     this.water.update(t / 1000);
     this.particles.update(this.paused ? 0 : realDt);
     this.floaters.update(realDt, this.camera);
     const v = this.player.vitals;
-    this.hud.update({ inventory: this.inventory, weapon: this.weapon, health: v.health, hunger: v.hunger });
+    this.hud.update({
+      inventory: this.inventory,
+      weapon: this.weapon,
+      health: v.health,
+      hunger: v.hunger,
+      isNight: this.clock.isNight,
+      day: this.clock.day,
+      phase: this.clock.phaseProgress,
+    });
     this.ctx.renderer.render(this.scene, this.camera);
   }
 
   /** Un pas de simulation : input → clock → player → monsters → structures → pickups → spawner. */
   private step(dt: number): void {
     this.now += dt;
+    this.handleDebugKeys();
+    for (const ev of this.clock.tick(dt)) {
+      if (ev === 'nightStarted') {
+        this.events.emit('nightStarted', { day: this.clock.day });
+        this.events.emit('toast', { text: '🌙 La nuit tombe… Protège-toi !' });
+      } else {
+        this.events.emit('dayStarted', { day: this.clock.day });
+        this.events.emit('toast', { text: '☀️ Le soleil se lève !' });
+      }
+    }
     this.player.update(dt, this.now, this.input, this.cam.yaw, {
       terrain: this.terrain,
       collision: this.collisionWorld(),
@@ -152,6 +176,16 @@ export class Game {
     this.handleEat();
     this.handleAttack();
     this.harvestables.update(this.now);
+  }
+
+  private handleDebugKeys(): void {
+    if (!this.debug) return;
+    if (this.input.consumePressed('KeyN')) this.clock.skipToNight();
+    if (this.input.consumePressed('KeyK')) {
+      const gift: Cost = {};
+      for (const id of ITEM_IDS) if (ITEMS[id].kind !== 'weapon') gift[id] = 20;
+      this.inventory.addAll(gift);
+    }
   }
 
   private handleEat(): void {
@@ -195,6 +229,7 @@ export class Game {
     const p = this.player.position;
     const sun = this.ctx.sun;
     sun.target.position.set(p.x, p.y, p.z);
-    sun.position.set(p.x + 30, p.y + 50, p.z + 15);
+    const d = this.sky.lightDir;
+    sun.position.set(p.x + d.x * 60, p.y + d.y * 60, p.z + d.z * 60);
   }
 }
