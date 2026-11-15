@@ -47,6 +47,13 @@ export class DayNightClock {
     return events;
   }
 
+  /** Reprend une partie sauvegardée, sans déclencher d'événement au tick suivant. */
+  restore(t: number, day: number): void {
+    this.t = ((t % 1) + 1) % 1;
+    this.day = Math.max(1, Math.floor(day));
+    this.wasNight = this.isNight;
+  }
+
   skipToNight(): void {
     if (!this.isNight) this.t = NIGHT_START;
   }

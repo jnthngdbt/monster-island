@@ -35,3 +35,24 @@ test('soleil haut le jour, couché la nuit', () => {
   run(c, 30);
   expect(c.sunElevation).toBeLessThan(0);
 });
+
+test('restore en pleine nuit ne relance pas nightStarted', () => {
+  const c = new DayNightClock(600, 0);
+  c.restore(0.8, 4);
+  expect(c.isNight).toBe(true);
+  expect(c.day).toBe(4);
+  expect(c.tick(1 / 60)).toEqual([]);
+});
+
+test('restore le jour puis la nuit arrive normalement', () => {
+  const c = new DayNightClock(600, 0);
+  c.restore(0.69, 2);
+  expect(run(c, 10)).toEqual(['nightStarted']);
+});
+
+test('restore ramène t dans [0, 1) et day au moins à 1', () => {
+  const c = new DayNightClock(600, 0);
+  c.restore(1.25, 0);
+  expect(c.t).toBeCloseTo(0.25);
+  expect(c.day).toBe(1);
+});
