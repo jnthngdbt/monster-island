@@ -20,9 +20,9 @@ export type MonsterWorld = {
   isNight: boolean;
   now: number;
   collision: CollisionWorld;
-  nearestStructure: (from: Vec2) => (Target & { key: string }) | null;
+  /** Rien ne bloque la vue entre `from` et le joueur. */
+  canSeePlayer: (from: Vec2) => boolean;
   attackPlayer: (m: Monster, damage: number) => void;
-  attackStructure: (key: string, damage: number) => void;
 };
 
 /** Tous les monstres de l'île et leur butin au sol. */
@@ -81,7 +81,6 @@ export class Monsters {
         .filter((o) => o !== m && Math.abs(o.position.x - m.position.x) < 2 && Math.abs(o.position.z - m.position.z) < 2)
         .map((o) => ({ x: o.position.x, z: o.position.z, r: o.radius }));
       const collision: CollisionWorld = { circles: [...w.collision.circles, ...others], boxes: w.collision.boxes };
-      const st = m.raider ? w.nearestStructure(m.position) : null;
       const intent = m.update(
         dt,
         {
@@ -89,18 +88,16 @@ export class Monsters {
           home: m.home,
           player: w.player,
           playerAlive: w.playerAlive,
+          playerVisible: w.canSeePlayer(m.position),
           isNight: w.isNight,
           now: w.now,
           raider: m.raider,
-          nearestStructure: st,
         },
         this.terrain,
         collision,
       );
       if (intent.attack === 'player') {
         w.attackPlayer(m, m.def.damage * (w.isNight ? m.def.nightDamageMult : 1));
-      } else if (intent.attack === 'structure' && intent.structureKey) {
-        w.attackStructure(intent.structureKey, m.def.structureDamage);
       }
     }
   }

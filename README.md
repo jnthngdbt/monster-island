@@ -11,7 +11,7 @@ Concept : [docs/game-concept.md](docs/game-concept.md) · Plan du MVP : [docs/su
 3. **Combattre** les Slimes pour récupérer de la gelée magique.
 4. **Fabriquer** une potion de gelée, puis une épée de pierre à l'atelier.
 5. **Construire** une base : planchers, murs, fenêtres, porte, toit, feu de camp, atelier.
-6. **Survivre** à la nuit : des Slimes violets viennent attaquer la base.
+6. **Survivre** à la nuit : des Slimes violets rôdent et chassent le joueur dès qu'ils le voient. Les constructions sont indestructibles : à l'abri derrière les murs, porte fermée, on ne risque rien.
 
 ## Contrôles
 

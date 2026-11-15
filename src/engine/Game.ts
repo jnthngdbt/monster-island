@@ -8,7 +8,6 @@ import { FixedStepper } from '../core/loop';
 import { createRng, type Rng } from '../core/rng';
 import { createTerrain, type Terrain } from '../core/terrain';
 import { BERRY_HUNGER, POTION_HEAL, RAID_SPAWN_INTERVAL, WORLD_SEED } from '../data/balance';
-import { BUILDABLES } from '../data/buildables';
 import { planNightSpawns, raiderCap } from '../core/spawner';
 import { RECIPES, type Station } from '../data/recipes';
 import { ITEM_IDS, ITEMS, type Cost, type ItemId } from '../data/items';
@@ -104,11 +103,7 @@ export class Game {
     this.campfireLights = new CampfireLights(this.scene);
     this.monsters = new Monsters(this.scene, this.terrain, createRng(WORLD_SEED + 3), this.particles, this.events);
     this.monsters.maintainPopulation(0, this.terrain.spawnPoint);
-    this.structures = new Structures(this.terrain, this.scene, this.particles, this.events);
-    this.events.on('structureDestroyed', ({ kind }) => {
-      const d = BUILDABLES[kind];
-      this.events.emit('toast', { text: `💥 Oh non ! Les monstres ont cassé : ${d.label} ${d.icon}` });
-    });
+    this.structures = new Structures(this.terrain, this.scene, this.events);
 
     this.player.teleport(this.terrain.spawnPoint.x, this.terrain.spawnPoint.z, this.terrain);
     this.player.yaw = Math.PI; // regarde vers l'intérieur de l'île
@@ -297,7 +292,7 @@ export class Game {
     this.spawnRaiders();
   }
 
-  /** La nuit, des monstres viennent attaquer la base (ou le joueur s'il n'en a pas). */
+  /** La nuit, des monstres rôdent autour de la base et chassent le joueur s'il sort. */
   private spawnRaiders(): void {
     if (!this.clock.isNight || this.now < this.nextRaidAt) return;
     this.nextRaidAt = this.now + RAID_SPAWN_INTERVAL;
@@ -315,9 +310,8 @@ export class Game {
       isNight: this.clock.isNight,
       now: this.now,
       collision: this.collisionWorld(),
-      nearestStructure: (from) => this.structures.nearestTarget(from),
+      canSeePlayer: (from) => !this.structures.blocksSight(from, this.player.position),
       attackPlayer: (m, dmg) => this.hurtPlayer(m, dmg),
-      attackStructure: (key, dmg) => this.structures.damage(key, dmg, this.now),
     });
   }
 

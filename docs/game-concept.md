@@ -84,13 +84,15 @@ Le joueur commence sans rien et construit progressivement son propre refuge.
 
 Structures possibles : planchers et murs, portes et fenêtres, toits, coffres de rangement, feux de camp, tours de défense, jardins, ateliers de fabrication.
 
-La construction doit être libre et intuitive : le joueur sélectionne une pièce, visualise son emplacement et la positionne dans le monde. La base devient progressivement une véritable forteresse personnalisée.
+La construction doit être libre et intuitive : le joueur sélectionne une pièce, visualise son emplacement et la positionne dans le monde. La base devient progressivement une véritable forteresse personnalisée. Les monstres ne peuvent pas casser les constructions.
 
 ## 8. Survie et cycle jour/nuit
 
 Jour : explorer, récolter, combattre, construire, fabriquer.
 
-Nuit : les monstres deviennent plus agressifs ; des créatures apparaissent près de la base ; certaines attaquent les constructions ; le joueur doit défendre son territoire.
+Nuit : les monstres deviennent plus agressifs ; des créatures rôdent près de la base et chassent le joueur dès qu'elles le voient dehors.
+
+Les constructions sont indestructibles : la maison est un vrai refuge. À l'intérieur, porte fermée, les monstres ne voient pas le joueur ; ils ne savent pas qu'il est là et s'en vont vaquer à leurs occupations. Si la porte reste ouverte, ceux qui l'aperçoivent par l'ouverture peuvent entrer.
 
 Le joueur doit surveiller sa santé et sa faim. La préparation pendant la journée est importante pour survivre à la nuit.
 

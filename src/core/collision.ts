@@ -60,3 +60,26 @@ export function circleHitsAABB(c: Circle, b: AABB): boolean {
   const cz = Math.max(b.minZ, Math.min(c.z, b.maxZ));
   return (c.x - cx) ** 2 + (c.z - cz) ** 2 < c.r * c.r;
 }
+
+/** Le segment [a, b] traverse-t-il la boîte (bords compris) ? Méthode des « slabs ». */
+export function segmentHitsAABB(a: Vec2, b: Vec2, box: AABB): boolean {
+  let t0 = 0;
+  let t1 = 1;
+  const axes: [number, number, number, number][] = [
+    [a.x, b.x - a.x, box.minX, box.maxX],
+    [a.z, b.z - a.z, box.minZ, box.maxZ],
+  ];
+  for (const [p, d, min, max] of axes) {
+    if (Math.abs(d) < 1e-9) {
+      if (p < min || p > max) return false;
+      continue;
+    }
+    let ta = (min - p) / d;
+    let tb = (max - p) / d;
+    if (ta > tb) [ta, tb] = [tb, ta];
+    t0 = Math.max(t0, ta);
+    t1 = Math.min(t1, tb);
+    if (t0 > t1) return false;
+  }
+  return true;
+}

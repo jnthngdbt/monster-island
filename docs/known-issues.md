@@ -5,9 +5,9 @@ Classés du plus visible pour un joueur au moins visible.
 
 ## Jeu
 
-### 1. Pièces qui flottent après un démontage ou une destruction
-- **Où :** `src/entities/Structures.ts` (`remove`, `damage`) ; les supports ne sont vérifiés qu'à la pose (`BuildGrid.validate`).
-- **Symptôme :** un mur démonté ou cassé par les monstres laisse son toit flotter. Les monstres n'attaquent jamais les toits, donc il reste pour toujours. Un plancher retiré laisse le feu de camp, l'atelier ou les murs en l'air (0,2 m ou plus).
+### 1. Pièces qui flottent après un démontage
+- **Où :** `src/entities/Structures.ts` (`remove`) ; les supports ne sont vérifiés qu'à la pose (`BuildGrid.validate`).
+- **Symptôme :** un mur démonté laisse son toit flotter. Un plancher retiré laisse le feu de camp, l'atelier ou les murs en l'air (0,2 m ou plus).
 - **Piste :** retirer en cascade (avec remboursement) les pièces qui perdent leur support, ou interdire de retirer une pièce qui en soutient une autre.
 
 ### 2. Un plancher posé après un objet l'enterre à moitié

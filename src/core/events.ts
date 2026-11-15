@@ -1,4 +1,3 @@
-import type { PieceKind } from '../data/buildables';
 import type { Cost } from '../data/items';
 import type { MonsterKind } from '../data/monsters';
 
@@ -33,7 +32,6 @@ export type GameEvents = {
   playerDamaged: { amount: number };
   monsterDefeated: { kind: MonsterKind; x: number; z: number };
   structurePlaced: { key: string };
-  structureDestroyed: { key: string; kind: PieceKind; x: number; z: number };
   nightStarted: { day: number };
   dayStarted: { day: number };
 };

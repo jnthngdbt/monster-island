@@ -1,26 +1,30 @@
 import type { MonsterDef } from '../data/monsters';
-import { AttackTimer, type Target } from './combat';
+import { AttackTimer } from './combat';
 import { dist2D, type Vec2 } from './math';
 import type { Rng } from './rng';
 
-export type BrainState = 'idle' | 'wander' | 'chase' | 'attack' | 'siege';
+export type BrainState = 'idle' | 'wander' | 'chase' | 'attack' | 'search';
+
+/** Temps passé à chercher le joueur là où il a été vu pour la dernière fois. */
+const SEARCH_TIME = 5;
+const SEARCH_REACHED = 0.8;
 
 export type Senses = {
   self: Vec2;
   home: Vec2;
   player: Vec2;
   playerAlive: boolean;
+  /** Aucun mur, fenêtre ou porte fermée entre le monstre et le joueur. */
+  playerVisible: boolean;
   isNight: boolean;
   now: number;
   raider: boolean;
-  nearestStructure: (Target & { key: string }) | null;
 };
 
 export type Intent = {
   move: Vec2;
   speed: number;
-  attack: 'player' | 'structure' | null;
-  structureKey?: string;
+  attack: 'player' | null;
 };
 
 const STILL: Vec2 = { x: 0, z: 0 };
@@ -32,12 +36,17 @@ function towards(from: Vec2, to: Vec2): Vec2 {
   return d < 1e-6 ? STILL : { x: dx / d, z: dz / d };
 }
 
-/** Intelligence simple d'un monstre : flâner, poursuivre, attaquer, assiéger. */
+/**
+ * Intelligence simple d'un monstre : flâner, poursuivre, attaquer, chercher.
+ * Il ne connaît le joueur que s'il le voit : à l'abri derrière des murs, on est tranquille.
+ */
 export class MonsterBrain {
   state: BrainState = 'idle';
   private timer: AttackTimer;
   private wanderTarget: Vec2 | null = null;
   private idleUntil = 0;
+  private lastSeen: Vec2 | null = null;
+  private searchUntil = 0;
 
   constructor(
     private def: MonsterDef,
@@ -52,8 +61,11 @@ export class MonsterBrain {
     const aggro = s.isNight ? def.aggroNight : def.aggroDay;
     const dPlayer = dist2D(s.self, s.player);
 
-    // 1. Le joueur est proche : poursuite / attaque.
-    if (s.playerAlive && dPlayer <= aggro) {
+    // 1. Il voit le joueur : poursuite / attaque. Un raider le repère de n'importe où.
+    const sees = s.playerAlive && s.playerVisible && (s.raider || dPlayer <= aggro);
+    if (sees) {
+      this.lastSeen = { x: s.player.x, z: s.player.z };
+      this.searchUntil = s.now + SEARCH_TIME;
       if (dPlayer <= def.attackRange) {
         this.state = 'attack';
         return { move: STILL, speed, attack: this.timer.tryFire(s.now) ? 'player' : null };
@@ -62,22 +74,12 @@ export class MonsterBrain {
       return { move: towards(s.self, s.player), speed, attack: null };
     }
 
-    // 2. Raider de nuit : attaque la base.
-    if (s.raider && s.nearestStructure) {
-      const st = s.nearestStructure;
-      this.state = 'siege';
-      if (dist2D(s.self, st) - st.radius <= def.attackRange) {
-        const fire = this.timer.tryFire(s.now);
-        return { move: STILL, speed, attack: fire ? 'structure' : null, structureKey: st.key };
-      }
-      return { move: towards(s.self, st), speed, attack: null };
+    // 2. Il vient de le perdre de vue : va voir où il était, puis abandonne.
+    if (this.lastSeen && s.playerAlive && s.now < this.searchUntil && dist2D(s.self, this.lastSeen) > SEARCH_REACHED) {
+      this.state = 'search';
+      return { move: towards(s.self, this.lastSeen), speed, attack: null };
     }
-
-    // 2b. Raider sans base à attaquer : il vient chercher le joueur.
-    if (s.raider && s.playerAlive) {
-      this.state = 'chase';
-      return { move: towards(s.self, s.player), speed, attack: null };
-    }
+    this.lastSeen = null;
 
     // 3. Trop loin de chez lui : rentre.
     if (dist2D(s.self, s.home) > def.leash) {

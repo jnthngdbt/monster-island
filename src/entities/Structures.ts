@@ -1,28 +1,24 @@
 import * as THREE from 'three';
 import { BuildGrid, type Placement } from '../core/buildGrid';
-import { circleHitsAABB, type AABB, type Circle } from '../core/collision';
-import type { Target } from '../core/combat';
+import { circleHitsAABB, segmentHitsAABB, type AABB, type Circle } from '../core/collision';
 import type { EventBus, GameEvents } from '../core/events';
 import { dist2D, type Vec2 } from '../core/math';
 import type { TerrainQuery } from '../core/terrain';
 import { STATION_RANGE } from '../data/balance';
 import { BUILDABLES, CELL, FLOOR_THICKNESS } from '../data/buildables';
 import type { Station } from '../data/recipes';
-import type { Particles } from '../world/particles';
 import { createPieceModel, type PieceModel } from '../world/pieces';
 
 type Piece = {
   p: Placement;
   model: PieceModel;
-  hp: number;
   open: boolean;
-  shakeUntil: number;
   placedAt: number;
 };
 
 const DOOR_REACH = 2.5;
 
-/** Les constructions du joueur : rendu, points de vie, portes, feux de camp. */
+/** Les constructions du joueur (indestructibles) : rendu, portes, feux de camp. */
 export class Structures {
   readonly grid: BuildGrid;
   private pieces = new Map<string, Piece>();
@@ -31,7 +27,6 @@ export class Structures {
   constructor(
     terrain: TerrainQuery,
     private scene: THREE.Scene,
-    private particles: Particles,
     private events: EventBus<GameEvents>,
   ) {
     this.grid = new BuildGrid(terrain);
@@ -48,7 +43,7 @@ export class Structures {
     model.group.rotation.y = p.yaw;
     model.group.traverse((o) => (o.userData.structureKey = p.key));
     this.scene.add(model.group);
-    this.pieces.set(p.key, { p, model, hp: BUILDABLES[p.kind].hp, open: false, shakeUntil: 0, placedAt: this.order++ });
+    this.pieces.set(p.key, { p, model, open: false, placedAt: this.order++ });
     this.events.emit('structurePlaced', { key: p.key });
   }
 
@@ -67,33 +62,6 @@ export class Structures {
 
   meshes(): THREE.Object3D[] {
     return [...this.pieces.values()].map((pc) => pc.model.group);
-  }
-
-  hp(key: string): number {
-    return this.pieces.get(key)?.hp ?? 0;
-  }
-
-  damage(key: string, n: number, now: number): void {
-    const piece = this.pieces.get(key);
-    if (!piece) return;
-    piece.hp -= n;
-    piece.shakeUntil = now + 0.3;
-    const { p } = piece;
-    this.particles.burst({ x: p.x, y: p.y + 1, z: p.z }, '#c08a52', 4, 2, { size: 0.8 });
-    if (piece.hp > BUILDABLES[p.kind].hp / 2) return;
-    // Fissures : la pièce s'assombrit sous 50 %.
-    piece.model.group.traverse((o) => {
-      if (o instanceof THREE.Mesh && !o.userData.cracked) {
-        o.material = (o.material as THREE.MeshLambertMaterial).clone();
-        (o.material as THREE.MeshLambertMaterial).color.multiplyScalar(0.7);
-        o.userData.cracked = true;
-      }
-    });
-    if (piece.hp <= 0) {
-      this.particles.burst({ x: p.x, y: p.y + 1.2, z: p.z }, '#c08a52', 18, 4, { size: 1.8, life: 1.1 });
-      this.remove(key);
-      this.events.emit('structureDestroyed', { key, kind: p.kind, x: p.x, z: p.z });
-    }
   }
 
   nearStation(kind: Station, pos: Vec2): boolean {
@@ -132,24 +100,14 @@ export class Structures {
     return out;
   }
 
-  /** Cibles des monstres de nuit (tout sauf les toits). */
-  targets(): (Target & { key: string })[] {
-    return [...this.pieces.values()]
-      .filter((pc) => BUILDABLES[pc.p.kind].slot !== 'roof')
-      .map((pc) => ({ id: pc.p.key, key: pc.p.key, x: pc.p.x, z: pc.p.z, radius: BUILDABLES[pc.p.kind].slot === 'object' ? 0.6 : 1 }));
-  }
-
-  nearestTarget(from: Vec2, maxDist = 30): (Target & { key: string }) | null {
-    let best: (Target & { key: string }) | null = null;
-    let bestD = maxDist;
-    for (const t of this.targets()) {
-      const d = dist2D(from, t);
-      if (d < bestD) {
-        best = t;
-        bestD = d;
-      }
+  /** Murs, fenêtres et portes fermées cachent ce qui est derrière (aux yeux des monstres). */
+  blocksSight(from: Vec2, to: Vec2): boolean {
+    for (const pc of this.pieces.values()) {
+      if (BUILDABLES[pc.p.kind].slot !== 'edge') continue;
+      if (pc.p.kind === 'door' && pc.open) continue;
+      if (segmentHitsAABB(from, to, this.grid.footprint(pc.p))) return true;
     }
-    return best;
+    return false;
   }
 
   /** Ouvre/ferme la porte la plus proche. Retourne true si une porte a bougé. */
@@ -181,9 +139,6 @@ export class Structures {
 
   update(now: number): void {
     for (const pc of this.pieces.values()) {
-      const g = pc.model.group;
-      const shaking = now < pc.shakeUntil;
-      g.position.x = pc.p.x + (shaking ? Math.sin(now * 70) * 0.05 : 0);
       if (pc.model.doorLeaf) {
         const target = pc.open ? -Math.PI / 2 : 0;
         pc.model.doorLeaf.rotation.y += (target - pc.model.doorLeaf.rotation.y) * 0.2;

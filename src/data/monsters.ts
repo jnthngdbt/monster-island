@@ -15,7 +15,6 @@ export type MonsterDef = {
   attackCooldown: number;
   damage: number;
   nightDamageMult: number;
-  structureDamage: number;
   leash: number;
   wanderRadius: number;
   loot: LootEntry[];
@@ -36,7 +35,6 @@ export const MONSTERS: Record<MonsterKind, MonsterDef> = {
     attackCooldown: 1.2,
     damage: 8,
     nightDamageMult: 1.25,
-    structureDamage: 10,
     leash: 25,
     wanderRadius: 8,
     loot: [{ item: 'jelly', min: 1, max: 2, chance: 1 }],
