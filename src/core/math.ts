@@ -20,3 +20,29 @@ export function angleDelta(a: number, b: number): number {
   if (d > Math.PI) d -= 2 * Math.PI;
   return d;
 }
+
+export type MoveKeys = { forward: boolean; back: boolean; left: boolean; right: boolean };
+
+/** Vecteur de déplacement (normalisé ou nul) relatif au lacet de la caméra. */
+export function moveVector(keys: MoveKeys, cameraYaw: number): Vec2 {
+  const f = (keys.forward ? 1 : 0) - (keys.back ? 1 : 0);
+  const r = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+  if (f === 0 && r === 0) return { x: 0, z: 0 };
+  const fw = forwardFromYaw(cameraYaw);
+  const rt = { x: -Math.cos(cameraYaw), z: Math.sin(cameraYaw) };
+  const x = fw.x * f + rt.x * r;
+  const z = fw.z * f + rt.z * r;
+  const len = Math.hypot(x, z);
+  return { x: x / len, z: z / len };
+}
+
+export type Vec3 = { x: number; y: number; z: number };
+
+/** Position de la caméra en orbite derrière la cible. */
+export function orbitPosition(target: Vec3, yaw: number, pitch: number, distance: number): Vec3 {
+  return {
+    x: target.x - Math.sin(yaw) * Math.cos(pitch) * distance,
+    y: target.y + 1.6 + Math.sin(pitch) * distance,
+    z: target.z - Math.cos(yaw) * Math.cos(pitch) * distance,
+  };
+}
