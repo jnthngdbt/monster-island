@@ -126,6 +126,20 @@ export class Harvestables {
     }
   }
 
+  /**
+   * Cache les ressources présentes sous une construction (elles repousseront quand la place sera libre).
+   * Utile au chargement : si la répartition a changé depuis la sauvegarde, rien ne pousse dans la base.
+   */
+  hideUnder(now: number, blocked: (c: Circle) => boolean): void {
+    for (const n of this.nodes) {
+      if (n.respawnAt !== null) continue;
+      if (!blocked({ x: n.x, z: n.z, r: HARVESTABLES[n.kind].radius * n.scale })) continue;
+      n.respawnAt = now;
+      this.animating.delete(n);
+      this.draw(n, now);
+    }
+  }
+
   targets(): Target[] {
     return this.nodes
       .filter((n) => n.respawnAt === null)

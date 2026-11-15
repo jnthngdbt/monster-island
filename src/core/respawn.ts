@@ -37,5 +37,10 @@ export function chooseRespawnPoint(
 export function applyRespawn(v: Vitals, now: number): void {
   v.health = MAX_HEALTH;
   v.hunger = Math.max(v.hunger, RESPAWN_MIN_HUNGER);
+  grantGrace(v, now);
+}
+
+/** Quelques secondes d'invulnérabilité (réapparition, reprise d'une partie près d'un monstre). */
+export function grantGrace(v: Vitals, now: number): void {
   v.invulnerableUntil = now + RESPAWN_INVULN;
 }

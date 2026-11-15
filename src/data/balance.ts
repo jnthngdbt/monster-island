@@ -1,6 +1,7 @@
 /** Toutes les valeurs d'équilibrage du jeu. */
 
 // Monde
+/** Changer la graine (ou la répartition dans data/harvestables.ts) renumérote les ressources des sauvegardes : voir core/save.ts. */
 export const WORLD_SEED = 1337;
 export const ISLAND_RADIUS = 90;
 export const MOUNTAIN = { x: -35, z: -30, r: 30, h: 9 };

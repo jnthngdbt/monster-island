@@ -1,4 +1,4 @@
-import { applyRespawn, chooseRespawnPoint } from '../../src/core/respawn';
+import { applyRespawn, chooseRespawnPoint, grantGrace } from '../../src/core/respawn';
 import { createTerrain } from '../../src/core/terrain';
 import { Vitals } from '../../src/core/vitals';
 import { WORLD_SEED } from '../../src/data/balance';
@@ -40,3 +40,18 @@ test('respawn garde une faim plus haute', () => {
   applyRespawn(v, 0);
   expect(v.hunger).toBe(80);
 });
+
+test('grâce au chargement : invulnérable quelques secondes, santé inchangée', () => {
+  const v = new Vitals();
+  v.health = 40;
+  grantGrace(v, 100);
+  expect(v.damage(10, 101)).toBe(false);
+  expect(v.health).toBe(40);
+  expect(applyRespawnInvulnEnd(100)).toBe(v.invulnerableUntil);
+});
+
+const applyRespawnInvulnEnd = (now: number) => {
+  const v = new Vitals();
+  applyRespawn(v, now);
+  return v.invulnerableUntil;
+};

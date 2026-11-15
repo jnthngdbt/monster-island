@@ -24,7 +24,7 @@ import { CraftPanel } from '../ui/craftPanel';
 import { FloatingText } from '../ui/floatingText';
 import { Hud } from '../ui/hud';
 import { createKoScreen, createPauseScreen, createTitleScreen, Hints, type KoScreen, type Overlay } from '../ui/screens';
-import { applyRespawn, chooseRespawnPoint } from '../core/respawn';
+import { applyRespawn, chooseRespawnPoint, grantGrace } from '../core/respawn';
 import { Particles } from '../world/particles';
 import { CampfireLights } from '../world/campfireLights';
 import { Sky } from '../world/sky';
@@ -234,12 +234,15 @@ export class Game {
 
     this.structures.restore(d.structures);
     this.harvestables.restore(d.harvest);
+    this.harvestables.hideUnder(this.now, (c) => this.structures.overlaps(c));
 
     this.player.position.set(d.player.x, d.player.y, d.player.z);
     this.player.yaw = d.player.yaw;
     this.cam.yaw = d.player.yaw;
     this.player.vitals.health = d.player.health;
     this.player.vitals.hunger = d.player.hunger;
+    // Les monstres du jour ont été placés loin de la plage, pas forcément loin d'ici.
+    grantGrace(this.player.vitals, this.now);
 
     if (this.clock.isNight) this.nextRaidAt = this.now + 3;
     if (this.player.vitals.isDead) this.respawn();

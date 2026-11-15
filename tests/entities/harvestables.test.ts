@@ -44,3 +44,16 @@ test('snapshot ne garde que les nœuds touchés, restore les rétablit', () => {
   expect(b.targets().some((t) => t.id === tree.id)).toBe(false);
   expect(b.snapshot()).toEqual(snap);
 });
+
+test("hideUnder cache une ressource intacte sous une construction (sauvegarde d'une ancienne version)", () => {
+  const h = make();
+  const tree = h.nodes.find((n) => n.kind === 'tree')!;
+  const under = (c: { x: number; z: number }) => c.x === tree.x && c.z === tree.z;
+  h.hideUnder(500, under);
+  expect(h.targets().some((t) => t.id === tree.id)).toBe(false);
+  h.update(10_000, under);
+  expect(h.targets().some((t) => t.id === tree.id)).toBe(false);
+  h.update(20_000, () => false);
+  expect(h.targets().some((t) => t.id === tree.id)).toBe(true);
+  expect(h.targets()).toHaveLength(h.nodes.length);
+});
