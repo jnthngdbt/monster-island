@@ -148,6 +148,10 @@ export class Game {
     };
 
     this.input.attachDom(canvas);
+    this.input.onFallback = () => {
+      document.body.classList.add('no-pointer-lock');
+      this.events.emit('toast', { text: '🖱️ Clic droit + glisser pour regarder' });
+    };
     this.pauseOverlay = createPauseScreen(ui, () => this.input.requestLock(canvas));
     const saved = this.store.load();
     const begin = () => {
@@ -421,7 +425,7 @@ export class Game {
   private knockOut(): void {
     this.state = 'ko';
     this.build.setActive(false);
-    document.exitPointerLock();
+    this.input.releaseLock();
     this.koScreen.open(performance.now());
   }
 
@@ -443,7 +447,7 @@ export class Game {
 
   private handleCraftKey(): void {
     if (!this.input.consumePressed('KeyC')) return;
-    document.exitPointerLock();
+    this.input.releaseLock();
     this.craftPanel.show();
   }
 

@@ -10,7 +10,17 @@ export class InputState {
   private dx = 0;
   private dy = 0;
   wheel = 0;
+  /** Entrées captées par le jeu (pointeur verrouillé, ou mode de secours actif). */
   locked = false;
+  /**
+   * Mode de secours quand le navigateur refuse le verrouillage du pointeur
+   * (iframe, panneau intégré) : clic droit tenu pour regarder, Échap pour la pause.
+   */
+  fallback = false;
+  /** Appelé une seule fois, quand le mode de secours s'active. */
+  onFallback?: () => void;
+  /** Le verrouillage a déjà réussi une fois : un refus est alors passager. */
+  private lockWorked = false;
 
   press(code: string): void {
     if (!this.down.has(code)) this.pressed.add(code);
@@ -86,17 +96,48 @@ export class InputState {
     this.wheel = 0;
   }
 
+  /** Active le mode de secours et capte les entrées. */
+  enableFallback(): void {
+    const first = !this.fallback;
+    this.fallback = true;
+    this.capture();
+    if (first) this.onFallback?.();
+  }
+
+  /** Mode de secours : le jeu capte les entrées (équivaut à verrouiller). */
+  capture(): void {
+    this.locked = true;
+    this.releaseAll();
+  }
+
+  /** Mode de secours : le jeu lâche les entrées (équivaut à déverrouiller → pause). */
+  uncapture(): void {
+    this.locked = false;
+    this.releaseAll();
+  }
+
+  /** En mode de secours, la souris ne tourne la caméra que clic droit tenu. */
+  acceptsMouseMove(): boolean {
+    return this.locked && (!this.fallback || this.buttons.has(2));
+  }
+
   attachDom(canvas: HTMLCanvasElement): void {
     window.addEventListener('keydown', (e) => {
       if (e.code === 'Tab' || e.code === 'Space') e.preventDefault();
+      // Sans verrouillage, le navigateur ne sort pas tout seul : Échap met en pause.
+      if (e.code === 'Escape' && this.fallback && this.locked) {
+        this.uncapture();
+        return;
+      }
       this.press(e.code);
     });
     window.addEventListener('keyup', (e) => this.release(e.code));
     window.addEventListener('mousemove', (e) => {
-      if (this.locked) this.moveMouse(e.movementX, e.movementY);
+      if (this.acceptsMouseMove()) this.moveMouse(e.movementX, e.movementY);
     });
     window.addEventListener('mousedown', (e) => {
-      if (this.locked) this.click(e.button);
+      // En mode de secours le curseur est visible : ignorer les clics sur l'interface.
+      if (this.locked && (!this.fallback || e.target === canvas)) this.click(e.button);
     });
     window.addEventListener('mouseup', (e) => this.releaseButton(e.button));
     window.addEventListener('wheel', (e) => {
@@ -104,14 +145,56 @@ export class InputState {
     }, { passive: true });
     window.addEventListener('contextmenu', (e) => e.preventDefault());
     document.addEventListener('pointerlockchange', () => {
+      if (this.fallback) return;
       this.locked = document.pointerLockElement === canvas;
+      if (this.locked) this.lockWorked = true;
       this.releaseAll();
     });
-    window.addEventListener('blur', () => this.releaseAll());
+    // Anciens navigateurs : le refus n'arrive que par cet événement.
+    document.addEventListener('pointerlockerror', () => this.onLockError(undefined));
+    // Perdre le focus met en pause, comme la perte du verrouillage. Pas
+    // visibilitychange : les panneaux intégrés le déclenchent sans arrêt.
+    window.addEventListener('blur', () => (this.fallback ? this.uncapture() : this.releaseAll()));
     document.addEventListener('visibilitychange', () => this.releaseAll());
   }
 
   requestLock(canvas: HTMLCanvasElement): void {
-    if (!this.locked) void canvas.requestPointerLock();
+    if (this.locked) return;
+    if (this.fallback) {
+      this.capture();
+      return;
+    }
+    try {
+      const p = canvas.requestPointerLock() as unknown as Promise<void> | undefined;
+      p?.catch?.((e: unknown) => this.onLockError(e));
+    } catch (e) {
+      this.onLockError(e);
+    }
   }
+
+  private onLockError(e: unknown): void {
+    if (!this.fallback && isPointerLockUnsupported(e, this.lockWorked)) this.enableFallback();
+  }
+
+  /** Rend la souris (inventaire, K.O.) : quitte le verrouillage ou le mode de secours. */
+  releaseLock(): void {
+    if (this.fallback) this.uncapture();
+    else document.exitPointerLock();
+  }
+}
+
+/**
+ * Le verrouillage est impossible dans ce document (iframe, panneau intégré).
+ * Chrome renvoie SecurityError aussi pour les refus passagers (relance trop
+ * rapide après Échap) : le nom ne suffit pas. Mais un refus passager suppose
+ * un verrouillage réussi avant ; un refus sans aucun succès est donc définitif.
+ */
+export function isPointerLockUnsupported(e: unknown, lockWorkedBefore: boolean): boolean {
+  if (!lockWorkedBefore) return true;
+  const err = e as { name?: string; message?: string } | null | undefined;
+  return (
+    err?.name === 'WrongDocumentError' ||
+    err?.name === 'NotSupportedError' ||
+    /not valid for pointer lock/i.test(err?.message ?? '')
+  );
 }

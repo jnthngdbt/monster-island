@@ -22,7 +22,7 @@ export function createOverlay(root: HTMLElement, html: string, className = 'over
 export const CONTROLS_HTML = `
   <div class="controls">
     <div><kbd>W A S D</kbd> marcher <small>(Z Q S D en AZERTY)</small></div>
-    <div><kbd>Souris</kbd> regarder · <kbd>Molette</kbd> zoom</div>
+    <div><kbd class="look-lock">Souris</kbd><kbd class="look-drag">Clic droit + glisser</kbd> regarder · <kbd>Molette</kbd> zoom</div>
     <div><kbd>Clic</kbd> frapper / récolter</div>
     <div><kbd>Shift</kbd> esquiver · <kbd>Espace</kbd> sauter</div>
     <div><kbd>F</kbd> manger une baie · <kbd>G</kbd> boire une potion</div>

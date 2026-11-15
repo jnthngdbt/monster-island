@@ -207,3 +207,8 @@ button.big.danger { background: #e05a4f; }
 }
 
 .debuginfo { position: absolute; right: 10px; top: 10px; color: #fff; font: 12px monospace; text-shadow: 0 1px 0 #000; }
+
+/* Sans verrouillage du pointeur (panneau intégré, iframe) : on regarde au clic droit. */
+.look-drag { display: none; }
+.no-pointer-lock .look-lock { display: none; }
+.no-pointer-lock .look-drag { display: inline-block; }
