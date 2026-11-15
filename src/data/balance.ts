@@ -28,3 +28,7 @@ export const BERRY_HUNGER = 15;
 export const DAY_CYCLE_SEC = 600;
 export const NIGHT_START = 0.7;
 export const START_TIME = 0.02;
+
+// Fabrication
+export const STATION_RANGE = 4;
+export const POTION_HEAL = 40;

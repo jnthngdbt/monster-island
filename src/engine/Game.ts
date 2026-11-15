@@ -7,7 +7,8 @@ import { Inventory } from '../core/inventory';
 import { FixedStepper } from '../core/loop';
 import { createRng, type Rng } from '../core/rng';
 import { createTerrain, type Terrain } from '../core/terrain';
-import { BERRY_HUNGER, WORLD_SEED } from '../data/balance';
+import { BERRY_HUNGER, POTION_HEAL, WORLD_SEED } from '../data/balance';
+import { RECIPES, type Station } from '../data/recipes';
 import { ITEM_IDS, ITEMS, type Cost, type ItemId } from '../data/items';
 import { bestWeapon, WEAPONS, type WeaponId } from '../data/weapons';
 import { Harvestables } from '../entities/Harvestables';
@@ -15,6 +16,7 @@ import type { Monster } from '../entities/Monster';
 import { Monsters } from '../entities/Monsters';
 import { Player } from '../entities/Player';
 import { ThirdPersonCamera } from '../entities/ThirdPersonCamera';
+import { CraftPanel } from '../ui/craftPanel';
 import { FloatingText } from '../ui/floatingText';
 import { Hud } from '../ui/hud';
 import { createOverlay, type Overlay } from '../ui/screens';
@@ -51,6 +53,7 @@ export class Game {
   readonly particles: Particles;
   readonly floaters: FloatingText;
   readonly hud: Hud;
+  readonly craftPanel: CraftPanel;
   readonly rng: Rng;
   readonly clock = new DayNightClock();
   readonly sky: Sky;
@@ -103,11 +106,22 @@ export class Game {
       '<div class="panel"><h1>Pause</h1><p>Clique pour continuer</p></div>',
     );
     this.pauseOverlay.el.addEventListener('click', () => this.input.requestLock(canvas));
+    this.craftPanel = new CraftPanel(ui, {
+      inventory: this.inventory,
+      nearStation: (st) => this.nearStation(st),
+      onCrafted: (id) => this.events.emit('toast', { text: `${ITEMS[RECIPES[id].output].icon} ${RECIPES[id].label} fabriquée !` }),
+      onClose: () => this.input.requestLock(canvas),
+    });
     canvas.addEventListener('click', () => this.input.requestLock(canvas));
   }
 
   get paused(): boolean {
-    return !this.input.locked;
+    return !this.input.locked || this.craftPanel.open;
+  }
+
+  /** Le joueur est-il près d'une station (atelier) ? Branché sur les structures. */
+  nearStation(_s: Station): boolean {
+    return false;
   }
 
   start(): void {
@@ -133,7 +147,8 @@ export class Game {
     const realDt = Math.min((t - this.lastFrame) / 1000, 0.25);
     this.lastFrame = t;
     if (this.paused) {
-      this.pauseOverlay.show();
+      if (this.craftPanel.open) this.pauseOverlay.hide();
+      else this.pauseOverlay.show();
     } else {
       this.pauseOverlay.hide();
       this.stepper.advance(realDt, (dt) => {
@@ -181,6 +196,8 @@ export class Game {
     });
     this.player.vitals.tick(dt);
     this.handleEat();
+    this.handlePotion();
+    this.handleCraftKey();
     this.handleDodge();
     this.handleAttack();
     this.harvestables.update(this.now);
@@ -228,6 +245,24 @@ export class Game {
     }
   }
 
+  private handleCraftKey(): void {
+    if (!this.input.consumePressed('KeyC')) return;
+    document.exitPointerLock();
+    this.craftPanel.show();
+  }
+
+  private handlePotion(): void {
+    if (!this.input.consumePressed('KeyG')) return;
+    if (this.inventory.remove({ jelly_potion: 1 })) {
+      this.player.vitals.heal(POTION_HEAL);
+      const p = this.player.position;
+      this.particles.burst({ x: p.x, y: p.y + 1.2, z: p.z }, '#9be07a', 10, 1.5, { up: 2 });
+      this.events.emit('toast', { text: '🧪 Glou glou… ça va mieux !' });
+    } else {
+      this.events.emit('toast', { text: 'Pas de potion. Fabrique-en avec C !' });
+    }
+  }
+
   private handleEat(): void {
     if (!this.input.consumePressed('KeyF')) return;
     if (this.inventory.remove({ berry: 1 })) {
@@ -268,6 +303,7 @@ export class Game {
     this.weapon = best;
     this.attackTimer = new AttackTimer(WEAPONS[best].cooldown);
     this.player.setWeapon(best);
+    this.events.emit('toast', { text: `Nouvelle arme : ${ITEMS[best].label} !` });
   }
 
   private followShadow(): void {
