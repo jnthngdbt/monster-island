@@ -82,12 +82,12 @@ export function parse(text: string | null): SaveData | null {
     harvest.push({ id: h.id, hitsLeft: h.hitsLeft, respawnAt: h.respawnAt });
   }
 
-  const { clock, player } = d as unknown as SaveData;
+  const { savedAt, now, playTime, clock, player } = d as unknown as SaveData;
   return {
     version: SAVE_VERSION,
-    savedAt: d.savedAt,
-    now: d.now,
-    playTime: d.playTime,
+    savedAt,
+    now,
+    playTime,
     clock: { t: clock.t, day: clock.day },
     player: { x: player.x, y: player.y, z: player.z, yaw: player.yaw, health: player.health, hunger: player.hunger },
     inventory,
