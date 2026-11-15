@@ -123,8 +123,9 @@ export function createPlayerModel(): PlayerModel {
 
   // Tête
   body.add(part(new THREE.IcosahedronGeometry(0.42, 1), c.skin, 0, 1.4, 0));
-  const hair = part(new THREE.IcosahedronGeometry(0.44, 1), c.hair, 0, 1.52, -0.06);
-  hair.scale.set(1, 0.7, 1);
+  // Assez grand pour couvrir les sommets du crâne (sinon la peau perce les facettes).
+  const hair = part(new THREE.IcosahedronGeometry(0.47, 1), c.hair, 0, 1.54, -0.06);
+  hair.scale.set(1, 0.72, 1);
   body.add(hair);
   const eyeGeo = new THREE.SphereGeometry(0.06, 6, 6);
   body.add(part(eyeGeo, '#1d1d1d', 0.14, 1.42, 0.37));
