@@ -92,7 +92,7 @@ export class Structures {
     if (piece.hp <= 0) {
       this.particles.burst({ x: p.x, y: p.y + 1.2, z: p.z }, '#c08a52', 18, 4, { size: 1.8, life: 1.1 });
       this.remove(key);
-      this.events.emit('structureDestroyed', { key, x: p.x, z: p.z });
+      this.events.emit('structureDestroyed', { key, kind: p.kind, x: p.x, z: p.z });
     }
   }
 

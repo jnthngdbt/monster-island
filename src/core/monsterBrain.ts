@@ -73,6 +73,12 @@ export class MonsterBrain {
       return { move: towards(s.self, st), speed, attack: null };
     }
 
+    // 2b. Raider sans base à attaquer : il vient chercher le joueur.
+    if (s.raider && s.playerAlive) {
+      this.state = 'chase';
+      return { move: towards(s.self, s.player), speed, attack: null };
+    }
+
     // 3. Trop loin de chez lui : rentre.
     if (dist2D(s.self, s.home) > def.leash) {
       this.state = 'wander';

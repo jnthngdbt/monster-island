@@ -69,6 +69,13 @@ test('raider assiège la structure', () => {
   expect(i.structureKey).toBe('edge:0:1:0');
 });
 
+test('raider sans base : vient vers le joueur, même de loin', () => {
+  const b = new MonsterBrain(def, createRng(1));
+  const i = b.update(1 / 60, { ...base, isNight: true, raider: true, player: { x: 0, z: 40 } });
+  expect(b.state).toBe('chase');
+  expect(i.move.z).toBeCloseTo(1);
+});
+
 test('trop loin de chez lui le jour : rentre', () => {
   const b = new MonsterBrain(def, createRng(1));
   const i = b.update(1 / 60, { ...base, self: { x: 30, z: 0 }, player: { x: 100, z: 100 } });

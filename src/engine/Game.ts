@@ -7,7 +7,9 @@ import { Inventory } from '../core/inventory';
 import { FixedStepper } from '../core/loop';
 import { createRng, type Rng } from '../core/rng';
 import { createTerrain, type Terrain } from '../core/terrain';
-import { BERRY_HUNGER, POTION_HEAL, WORLD_SEED } from '../data/balance';
+import { BERRY_HUNGER, POTION_HEAL, RAID_SPAWN_INTERVAL, WORLD_SEED } from '../data/balance';
+import { BUILDABLES } from '../data/buildables';
+import { planNightSpawns, raiderCap } from '../core/spawner';
 import { RECIPES, type Station } from '../data/recipes';
 import { ITEM_IDS, ITEMS, type Cost, type ItemId } from '../data/items';
 import { bestWeapon, WEAPONS, type WeaponId } from '../data/weapons';
@@ -67,6 +69,7 @@ export class Game {
   /** Temps simulé (s). */
   now = 0;
   private attackTimer = new AttackTimer(WEAPONS.stick.cooldown);
+  private nextRaidAt = Infinity;
   private stepper = new FixedStepper();
   private water: Water;
   private lastFrame = 0;
@@ -92,6 +95,10 @@ export class Game {
     this.monsters = new Monsters(this.scene, this.terrain, createRng(WORLD_SEED + 3), this.particles, this.events);
     this.monsters.maintainPopulation(0, this.terrain.spawnPoint);
     this.structures = new Structures(this.terrain, this.scene, this.particles, this.events);
+    this.events.on('structureDestroyed', ({ kind }) => {
+      const d = BUILDABLES[kind];
+      this.events.emit('toast', { text: `💥 Oh non ! Les monstres ont cassé : ${d.label} ${d.icon}` });
+    });
 
     this.player.teleport(this.terrain.spawnPoint.x, this.terrain.spawnPoint.z, this.terrain);
     this.player.yaw = Math.PI; // regarde vers l'intérieur de l'île
@@ -204,8 +211,11 @@ export class Game {
       if (ev === 'nightStarted') {
         this.events.emit('nightStarted', { day: this.clock.day });
         this.events.emit('toast', { text: '🌙 La nuit tombe… Protège-toi !' });
+        this.nextRaidAt = this.now + 3;
       } else {
         this.monsters.scheduleRaiderFade(this.now);
+        this.nextRaidAt = Infinity;
+        this.events.emit('toast', { text: `⭐ Tu as survécu à la nuit ${this.clock.day - 1} !` });
         this.events.emit('dayStarted', { day: this.clock.day });
         this.events.emit('toast', { text: '☀️ Le soleil se lève !' });
       }
@@ -230,6 +240,18 @@ export class Game {
       this.give(gained, { x: at.x, y: at.y + 1, z: at.z });
     }
     this.monsters.maintainPopulation(this.now, this.player.position);
+    this.spawnRaiders();
+  }
+
+  /** La nuit, des monstres viennent attaquer la base (ou le joueur s'il n'en a pas). */
+  private spawnRaiders(): void {
+    if (!this.clock.isNight || this.now < this.nextRaidAt) return;
+    this.nextRaidAt = this.now + RAID_SPAWN_INTERVAL;
+    const missing = raiderCap(this.clock.day) - this.monsters.raiderCount;
+    if (missing <= 0) return;
+    const anchor = this.structures.centroid() ?? this.player.position;
+    const pts = planNightSpawns({ terrain: this.terrain, rng: this.rng, anchor, player: this.player.position, count: missing });
+    for (const p of pts) this.monsters.spawn('slime', p.x, p.z, true);
   }
 
   private updateMonsters(dt: number): void {

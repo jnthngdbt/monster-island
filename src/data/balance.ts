@@ -32,3 +32,11 @@ export const START_TIME = 0.02;
 // Fabrication
 export const STATION_RANGE = 4;
 export const POTION_HEAL = 40;
+
+// Attaques de nuit
+export const RAIDER_BASE = 3;
+export const RAIDER_PER_NIGHT = 2;
+export const RAIDER_MAX = 12;
+export const RAID_SPAWN_INTERVAL = 20;
+export const RAID_RING: readonly [number, number] = [18, 26];
+export const RAID_MIN_PLAYER_DIST = 15;

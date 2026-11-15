@@ -1,7 +1,8 @@
+import type { PieceKind } from '../data/buildables';
 import type { Cost } from '../data/items';
 import type { MonsterKind } from '../data/monsters';
 
-type Handler<T> =(payload: T) => void;
+type Handler<T> = (payload: T) => void;
 
 /** Petit bus d'événements typé. */
 export class EventBus<E extends Record<string, unknown>> {
@@ -32,7 +33,7 @@ export type GameEvents = {
   playerDamaged: { amount: number };
   monsterDefeated: { kind: MonsterKind; x: number; z: number };
   structurePlaced: { key: string };
-  structureDestroyed: { key: string; x: number; z: number };
+  structureDestroyed: { key: string; kind: PieceKind; x: number; z: number };
   nightStarted: { day: number };
   dayStarted: { day: number };
 };
