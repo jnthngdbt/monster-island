@@ -6,6 +6,7 @@ import { dist2D, type Vec2 } from '../core/math';
 import type { TerrainQuery } from '../core/terrain';
 import { STATION_RANGE } from '../data/balance';
 import { BUILDABLES, CELL, FLOOR_THICKNESS } from '../data/buildables';
+import type { SavedPiece } from '../core/save';
 import type { Station } from '../data/recipes';
 import { createPieceModel, type PieceModel } from '../world/pieces';
 
@@ -17,6 +18,7 @@ type Piece = {
 };
 
 const DOOR_REACH = 2.5;
+const DOOR_OPEN_ANGLE = -Math.PI / 2;
 
 /** Les constructions du joueur (indestructibles) : rendu, portes, feux de camp. */
 export class Structures {
@@ -45,6 +47,21 @@ export class Structures {
     this.scene.add(model.group);
     this.pieces.set(p.key, { p, model, open: false, placedAt: this.order++ });
     this.events.emit('structurePlaced', { key: p.key });
+  }
+
+  /** Pièces dans l'ordre de pose, avec l'état des portes. */
+  snapshot(): SavedPiece[] {
+    return [...this.pieces.values()].sort((a, b) => a.placedAt - b.placedAt).map((pc) => ({ p: pc.p, open: pc.open }));
+  }
+
+  /** Repose des pièces sauvegardées (sans coût ni validation), portes déjà dans leur position. */
+  restore(saved: SavedPiece[]): void {
+    for (const { p, open } of saved) {
+      this.add(p);
+      const pc = this.pieces.get(p.key)!;
+      pc.open = open;
+      if (pc.model.doorLeaf) pc.model.doorLeaf.rotation.y = open ? DOOR_OPEN_ANGLE : 0;
+    }
   }
 
   /** Démonte une pièce (sans casse). */
@@ -140,7 +157,7 @@ export class Structures {
   update(now: number): void {
     for (const pc of this.pieces.values()) {
       if (pc.model.doorLeaf) {
-        const target = pc.open ? -Math.PI / 2 : 0;
+        const target = pc.open ? DOOR_OPEN_ANGLE : 0;
         pc.model.doorLeaf.rotation.y += (target - pc.model.doorLeaf.rotation.y) * 0.2;
       }
       if (pc.model.flames) {

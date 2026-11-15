@@ -27,3 +27,20 @@ test('il repousse quand la place est libre', () => {
   h.update(2000, () => false);
   expect(h.targets().some((t) => t.id === tree.id)).toBe(true);
 });
+
+test('snapshot ne garde que les nœuds touchés, restore les rétablit', () => {
+  const a = make();
+  const tree = a.nodes.find((n) => n.kind === 'tree')!;
+  chop(a, tree.id);
+  const rock = a.nodes.find((n) => n.kind === 'rock')!;
+  a.hit(rock.id, 1, 0);
+  const snap = a.snapshot();
+  expect(snap).toEqual([
+    { id: tree.id, hitsLeft: tree.hitsLeft, respawnAt: tree.respawnAt },
+    { id: rock.id, hitsLeft: rock.hitsLeft, respawnAt: null },
+  ]);
+  const b = make();
+  b.restore([...snap, { id: 'tree-99999', hitsLeft: 0, respawnAt: 5 }]);
+  expect(b.targets().some((t) => t.id === tree.id)).toBe(false);
+  expect(b.snapshot()).toEqual(snap);
+});

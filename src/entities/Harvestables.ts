@@ -3,6 +3,7 @@ import type { Circle } from '../core/collision';
 import type { Target } from '../core/combat';
 import type { Cost } from '../core/inventory';
 import type { Rng } from '../core/rng';
+import type { SavedNode } from '../core/save';
 import { scatter } from '../core/scatter';
 import type { Terrain } from '../core/terrain';
 import { HARVESTABLES, type HarvestKind } from '../data/harvestables';
@@ -101,6 +102,27 @@ export class Harvestables {
     for (const n of this.animating) {
       this.draw(n, now);
       if (now > n.shakeUntil && now - n.growStart > 1) this.animating.delete(n);
+    }
+  }
+
+  /** Ressources entamées ou épuisées (les autres se recréent depuis la graine du monde). */
+  snapshot(): SavedNode[] {
+    return this.nodes
+      .filter((n) => n.respawnAt !== null || n.hitsLeft < HARVESTABLES[n.kind].hits)
+      .map((n) => ({ id: n.id, hitsLeft: n.hitsLeft, respawnAt: n.respawnAt }));
+  }
+
+  /** Rétablit des ressources sauvegardées, sans animation. Les id inconnus sont ignorés. */
+  restore(saved: SavedNode[]): void {
+    for (const s of saved) {
+      const n = this.byId.get(s.id);
+      if (!n) continue;
+      n.hitsLeft = s.hitsLeft;
+      n.respawnAt = s.respawnAt;
+      n.shakeUntil = 0;
+      n.growStart = -Infinity;
+      this.animating.delete(n);
+      this.draw(n, 0);
     }
   }
 
