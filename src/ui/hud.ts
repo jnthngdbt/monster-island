@@ -6,7 +6,13 @@ import { type WeaponId } from '../data/weapons';
 export type HudState = {
   inventory: Inventory;
   weapon: WeaponId;
+  health: number;
+  hunger: number;
 };
+
+function bar(cls: string, icon: string): string {
+  return `<div class="stat ${cls}"><span class="icon">${icon}</span><div class="track"><div class="fill"></div></div></div>`;
+}
 
 /** Interface en jeu : ressources, arme, réticule, messages. */
 export class Hud {
@@ -21,6 +27,7 @@ export class Hud {
     this.el = document.createElement('div');
     this.el.className = 'hud';
     this.el.innerHTML = `
+      <div class="stats">${bar('health', '❤️')}${bar('hunger', '🍗')}</div>
       <div class="crosshair"></div>
       <div class="toasts"></div>
       <div class="bottom">
@@ -31,8 +38,15 @@ export class Hud {
     this.bar = this.el.querySelector('.resbar')!;
     this.weaponEl = this.el.querySelector('.weapon')!;
     this.toasts = this.el.querySelector('.toasts')!;
+    this.healthFill = this.el.querySelector('.health .fill')!;
+    this.hungerFill = this.el.querySelector('.hunger .fill')!;
+    this.hungerStat = this.el.querySelector('.stat.hunger')!;
     events.on('toast', ({ text }) => this.toast(text));
   }
+
+  private healthFill: HTMLDivElement;
+  private hungerFill: HTMLDivElement;
+  private hungerStat: HTMLDivElement;
 
   toast(text: string): void {
     // Pas deux fois le même message à l'écran.
@@ -46,6 +60,9 @@ export class Hud {
   }
 
   update(s: HudState): void {
+    this.healthFill.style.width = `${Math.round(s.health)}%`;
+    this.hungerFill.style.width = `${Math.round(s.hunger)}%`;
+    this.hungerStat.classList.toggle('low', s.hunger < 20);
     const entries = s.inventory.entries().filter(([id]) => ITEMS[id].kind !== 'weapon');
     const key = entries.map(([id, n]) => `${id}:${n}`).join('|');
     if (key !== this.lastInvKey) {

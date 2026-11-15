@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { EMPTY_WORLD, resolveCircle, type CollisionWorld } from '../core/collision';
 import { angleDelta, moveVector } from '../core/math';
 import type { TerrainQuery } from '../core/terrain';
+import { Vitals } from '../core/vitals';
 import { GRAVITY, JUMP_VELOCITY, PLAYER_SPEED } from '../data/balance';
 import type { WeaponId } from '../data/weapons';
 import type { InputState } from '../engine/input';
@@ -19,6 +20,7 @@ export class Player {
   grounded = true;
   readonly model: PlayerModel;
   readonly mesh: THREE.Group;
+  readonly vitals = new Vitals();
   private walkPhase = 0;
   private swingStart = -Infinity;
   private simNow = 0;

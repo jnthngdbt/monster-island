@@ -6,7 +6,7 @@ import { Inventory } from '../core/inventory';
 import { FixedStepper } from '../core/loop';
 import { createRng, type Rng } from '../core/rng';
 import { createTerrain, type Terrain } from '../core/terrain';
-import { WORLD_SEED } from '../data/balance';
+import { BERRY_HUNGER, WORLD_SEED } from '../data/balance';
 import { ITEMS, type Cost, type ItemId } from '../data/items';
 import { bestWeapon, WEAPONS, type WeaponId } from '../data/weapons';
 import { Harvestables } from '../entities/Harvestables';
@@ -136,7 +136,8 @@ export class Game {
     this.water.update(t / 1000);
     this.particles.update(this.paused ? 0 : realDt);
     this.floaters.update(realDt, this.camera);
-    this.hud.update({ inventory: this.inventory, weapon: this.weapon });
+    const v = this.player.vitals;
+    this.hud.update({ inventory: this.inventory, weapon: this.weapon, health: v.health, hunger: v.hunger });
     this.ctx.renderer.render(this.scene, this.camera);
   }
 
@@ -147,8 +148,20 @@ export class Game {
       terrain: this.terrain,
       collision: this.collisionWorld(),
     });
+    this.player.vitals.tick(dt);
+    this.handleEat();
     this.handleAttack();
     this.harvestables.update(this.now);
+  }
+
+  private handleEat(): void {
+    if (!this.input.consumePressed('KeyF')) return;
+    if (this.inventory.remove({ berry: 1 })) {
+      this.player.vitals.eat(BERRY_HUNGER);
+      this.events.emit('toast', { text: 'Miam ! 🫐' });
+    } else {
+      this.events.emit('toast', { text: 'Pas de baies… Cueille un buisson !' });
+    }
   }
 
   private handleAttack(): void {

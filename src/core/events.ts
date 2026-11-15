@@ -28,4 +28,5 @@ export type GameEvents = {
   toast: { text: string };
   itemsChanged: Record<string, never>;
   harvested: { x: number; y: number; z: number; gained: Cost };
+  playerDamaged: { amount: number };
 };
