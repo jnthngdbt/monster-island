@@ -11,6 +11,8 @@ import { BERRY_HUNGER, WORLD_SEED } from '../data/balance';
 import { ITEM_IDS, ITEMS, type Cost, type ItemId } from '../data/items';
 import { bestWeapon, WEAPONS, type WeaponId } from '../data/weapons';
 import { Harvestables } from '../entities/Harvestables';
+import type { Monster } from '../entities/Monster';
+import { Monsters } from '../entities/Monsters';
 import { Player } from '../entities/Player';
 import { ThirdPersonCamera } from '../entities/ThirdPersonCamera';
 import { FloatingText } from '../ui/floatingText';
@@ -45,6 +47,7 @@ export class Game {
   readonly cam: ThirdPersonCamera;
   readonly inventory = new Inventory({ stick: 1 });
   readonly harvestables: Harvestables;
+  readonly monsters: Monsters;
   readonly particles: Particles;
   readonly floaters: FloatingText;
   readonly hud: Hud;
@@ -77,6 +80,8 @@ export class Game {
     this.harvestables = new Harvestables(this.terrain, createRng(WORLD_SEED + 2), this.scene);
     this.particles = new Particles(this.scene);
     this.sky = new Sky(this.ctx);
+    this.monsters = new Monsters(this.scene, this.terrain, createRng(WORLD_SEED + 3), this.particles, this.events);
+    this.monsters.maintainPopulation(0, this.terrain.spawnPoint);
 
     this.player.teleport(this.terrain.spawnPoint.x, this.terrain.spawnPoint.z, this.terrain);
     this.player.yaw = Math.PI; // regarde vers l'intérieur de l'île
@@ -142,6 +147,7 @@ export class Game {
     this.water.update(t / 1000);
     this.particles.update(this.paused ? 0 : realDt);
     this.floaters.update(realDt, this.camera);
+    this.monsters.faceCamera(this.camera);
     const v = this.player.vitals;
     this.hud.update({
       inventory: this.inventory,
@@ -164,6 +170,7 @@ export class Game {
         this.events.emit('nightStarted', { day: this.clock.day });
         this.events.emit('toast', { text: '🌙 La nuit tombe… Protège-toi !' });
       } else {
+        this.monsters.scheduleRaiderFade(this.now);
         this.events.emit('dayStarted', { day: this.clock.day });
         this.events.emit('toast', { text: '☀️ Le soleil se lève !' });
       }
@@ -174,8 +181,41 @@ export class Game {
     });
     this.player.vitals.tick(dt);
     this.handleEat();
+    this.handleDodge();
     this.handleAttack();
     this.harvestables.update(this.now);
+    this.updateMonsters(dt);
+    for (const { gained, at } of this.monsters.updatePickups(dt, this.now, this.player.position)) {
+      this.give(gained, { x: at.x, y: at.y + 1, z: at.z });
+    }
+    this.monsters.maintainPopulation(this.now, this.player.position);
+  }
+
+  private updateMonsters(dt: number): void {
+    this.monsters.update(dt, {
+      player: this.player.position,
+      playerAlive: !this.player.vitals.isDead,
+      isNight: this.clock.isNight,
+      now: this.now,
+      collision: this.collisionWorld(),
+      nearestStructure: () => null,
+      attackPlayer: (m, dmg) => this.hurtPlayer(m, dmg),
+      attackStructure: () => {},
+    });
+  }
+
+  private hurtPlayer(m: Monster, damage: number): void {
+    if (this.player.dodge.isInvulnerable(this.now)) return;
+    if (!this.player.vitals.damage(damage, this.now)) return;
+    this.player.knockFrom(m.position);
+    this.hud.flashHurt();
+    this.events.emit('playerDamaged', { amount: damage });
+  }
+
+  private handleDodge(): void {
+    if (this.input.consumePressed('ShiftLeft') || this.input.consumePressed('ShiftRight')) {
+      this.player.tryDodge(this.now, this.cam.yaw);
+    }
   }
 
   private handleDebugKeys(): void {
@@ -206,6 +246,11 @@ export class Game {
     this.player.yaw = this.cam.yaw;
     this.player.startSwing(this.now);
 
+    const foe = selectTarget(p, this.cam.yaw, this.monsters.targets(), w.range, w.arcDeg);
+    if (foe) {
+      this.monsters.hit(foe.id, w.damage, p, this.now);
+      return;
+    }
     const target = selectTarget(p, this.cam.yaw, this.harvestables.targets(), w.range, w.arcDeg);
     if (!target) return;
     const node = this.harvestables.get(target.id)!;

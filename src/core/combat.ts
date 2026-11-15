@@ -62,6 +62,11 @@ export class DodgeState {
     return now - this.startedAt < this.cfg.duration;
   }
 
+  /** 0 → 1 pendant l'esquive, null sinon. */
+  progress(now: number): number | null {
+    return this.isActive(now) ? (now - this.startedAt) / this.cfg.duration : null;
+  }
+
   isInvulnerable(now: number): boolean {
     return now - this.startedAt < this.cfg.iframes;
   }

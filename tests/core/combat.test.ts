@@ -42,6 +42,15 @@ test('esquive : iframes puis cooldown', () => {
   expect(d.start(1.0)).toBe(true);
 });
 
+test('esquive : progression 0 → 1 pendant la durée, null ensuite', () => {
+  const d = new DodgeState();
+  expect(d.progress(0)).toBeNull();
+  d.start(1);
+  expect(d.progress(1)).toBeCloseTo(0);
+  expect(d.progress(1.15)).toBeCloseTo(0.5);
+  expect(d.progress(1.31)).toBeNull();
+});
+
 test('rollLoot respecte min/max', () => {
   const r = createRng(3);
   for (let i = 0; i < 200; i++) {

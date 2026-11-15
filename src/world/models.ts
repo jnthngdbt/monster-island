@@ -51,6 +51,42 @@ export function createWeaponModel(id: 'stick' | 'stone_sword'): THREE.Group {
   return g;
 }
 
+export type SlimeModel = { group: THREE.Group; body: THREE.Group; skin: THREE.Mesh };
+
+/** Slime gélatineux et mignon : gros yeux, reflet. Regarde vers +Z. */
+export function createSlimeModel(color: string, glow = false): SlimeModel {
+  const group = new THREE.Group();
+  const body = new THREE.Group();
+  group.add(body);
+  const skinMat = new THREE.MeshLambertMaterial({
+    color,
+    flatShading: true,
+    transparent: true,
+    opacity: 0.85,
+    emissive: glow ? color : '#000000',
+    emissiveIntensity: glow ? 0.45 : 0,
+  });
+  const skin = new THREE.Mesh(new THREE.IcosahedronGeometry(0.6, 1), skinMat);
+  skin.scale.set(1, 0.8, 1);
+  skin.position.y = 0.48;
+  skin.castShadow = true;
+  body.add(skin);
+  // Noyau plus foncé visible à travers la gelée.
+  const core = new THREE.Mesh(new THREE.IcosahedronGeometry(0.25, 0), mat(glow ? '#5a3fd1' : '#3fae4f'));
+  core.position.set(0, 0.42, -0.05);
+  body.add(core);
+  const eyeWhite = new THREE.SphereGeometry(0.13, 8, 8);
+  const pupil = new THREE.SphereGeometry(0.07, 6, 6);
+  for (const sx of [-1, 1]) {
+    body.add(part(eyeWhite, '#ffffff', 0.18 * sx, 0.62, 0.45));
+    body.add(part(pupil, '#1d1d1d', 0.18 * sx, 0.63, 0.55));
+  }
+  const shine = new THREE.Mesh(new THREE.SphereGeometry(0.09, 6, 6), mat('#ffffff', { transparent: true, opacity: 0.7 }));
+  shine.position.set(-0.25, 0.8, 0.25);
+  body.add(shine);
+  return { group, body, skin };
+}
+
 export type PlayerModel = {
   group: THREE.Group;
   body: THREE.Group;

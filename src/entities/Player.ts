@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { EMPTY_WORLD, resolveCircle, type CollisionWorld } from '../core/collision';
-import { angleDelta, moveVector } from '../core/math';
+import { DodgeState } from '../core/combat';
+import { angleDelta, forwardFromYaw, moveVector, type Vec2 } from '../core/math';
 import type { TerrainQuery } from '../core/terrain';
 import { Vitals } from '../core/vitals';
 import { GRAVITY, JUMP_VELOCITY, PLAYER_SPEED } from '../data/balance';
@@ -21,6 +22,9 @@ export class Player {
   readonly model: PlayerModel;
   readonly mesh: THREE.Group;
   readonly vitals = new Vitals();
+  readonly dodge = new DodgeState();
+  private dodgeDir: Vec2 = { x: 0, z: 0 };
+  private push: Vec2 = { x: 0, z: 0 };
   private walkPhase = 0;
   private swingStart = -Infinity;
   private simNow = 0;
@@ -44,6 +48,23 @@ export class Player {
     hand.add(createWeaponModel(id));
   }
 
+  /** Esquive dans la direction de marche, ou en arrière si immobile. */
+  tryDodge(now: number, cameraYaw: number): boolean {
+    if (!this.dodge.start(now)) return false;
+    const moving = this.lastMove.x !== 0 || this.lastMove.z !== 0;
+    const f = forwardFromYaw(cameraYaw);
+    this.dodgeDir = moving ? { ...this.lastMove } : { x: -f.x, z: -f.z };
+    return true;
+  }
+
+  /** Petit recul quand un monstre nous touche. */
+  knockFrom(from: Vec2): void {
+    const dx = this.position.x - from.x;
+    const dz = this.position.z - from.z;
+    const d = Math.hypot(dx, dz) || 1;
+    this.push = { x: (dx / d) * 7, z: (dz / d) * 7 };
+  }
+
   startSwing(now: number): void {
     this.swingStart = now;
   }
@@ -63,12 +84,23 @@ export class Player {
     const moving = dir.x !== 0 || dir.z !== 0;
     this.lastMove = dir;
 
-    if (moving) {
+    const dodging = this.dodge.isActive(now);
+    if (dodging) {
+      const v = this.dodge.cfg.distance / this.dodge.cfg.duration;
+      this.moveBy(this.dodgeDir.x * v * dt, this.dodgeDir.z * v * dt, world);
+      this.yaw = Math.atan2(this.dodgeDir.x, this.dodgeDir.z);
+    } else if (moving) {
       this.moveBy(dir.x * PLAYER_SPEED * dt, dir.z * PLAYER_SPEED * dt, world);
       if (now - this.swingStart > SWING_TIME) {
         const target = Math.atan2(dir.x, dir.z);
         this.yaw += angleDelta(this.yaw, target) * Math.min(1, dt * 12);
       }
+    }
+
+    if (Math.abs(this.push.x) + Math.abs(this.push.z) > 0.05) {
+      this.moveBy(this.push.x * dt, this.push.z * dt, world);
+      this.push.x *= Math.max(0, 1 - dt * 8);
+      this.push.z *= Math.max(0, 1 - dt * 8);
     }
 
     // Saut et gravité
@@ -122,6 +154,14 @@ export class Player {
       m.rightArm.rotation.x = s * 0.8;
     }
     m.body.position.y = moving ? Math.abs(Math.sin(this.walkPhase)) * 0.06 : 0;
+    // Roulade avant pendant l'esquive (un tour complet autour du centre du corps).
+    const roll = this.dodge.progress(this.simNow);
+    if (roll !== null) {
+      m.body.rotation.x = roll * Math.PI * 2;
+      m.body.position.y += Math.sin(roll * Math.PI) * 0.5;
+    } else {
+      m.body.rotation.x = 0;
+    }
     this.mesh.position.copy(this.position);
     this.mesh.rotation.y = this.yaw;
   }

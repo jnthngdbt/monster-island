@@ -34,6 +34,7 @@ export class Hud {
     this.el.innerHTML = `
       <div class="stats">${bar('health', '❤️')}${bar('hunger', '🍗')}</div>
       <div class="clock"><span class="icon">☀️</span><span class="label">Jour 1</span><div class="track"><div class="fill"></div></div></div>
+      <div class="hurt"></div>
       <div class="crosshair"></div>
       <div class="toasts"></div>
       <div class="bottom">
@@ -62,6 +63,14 @@ export class Hud {
   private clockLabel: HTMLSpanElement;
   private clockFill: HTMLDivElement;
   private lastClock = '';
+
+  /** Bord d'écran rose (jamais rouge sang) quand le joueur est touché. */
+  flashHurt(): void {
+    const el = this.el.querySelector<HTMLDivElement>('.hurt')!;
+    el.classList.remove('on');
+    void el.offsetWidth;
+    el.classList.add('on');
+  }
 
   toast(text: string): void {
     // Pas deux fois le même message à l'écran.

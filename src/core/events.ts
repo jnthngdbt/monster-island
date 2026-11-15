@@ -1,4 +1,5 @@
 import type { Cost } from '../data/items';
+import type { MonsterKind } from '../data/monsters';
 
 type Handler<T> =(payload: T) => void;
 
@@ -29,6 +30,7 @@ export type GameEvents = {
   itemsChanged: Record<string, never>;
   harvested: { x: number; y: number; z: number; gained: Cost };
   playerDamaged: { amount: number };
+  monsterDefeated: { kind: MonsterKind; x: number; z: number };
   nightStarted: { day: number };
   dayStarted: { day: number };
 };
